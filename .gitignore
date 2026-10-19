@@ -5,6 +5,7 @@ dist/
 design/
 result
 result-*
-packaging/arch/src/
-packaging/arch/pkg/
-packaging/arch/*.pkg.tar.*
+packaging/*/src/
+packaging/*/pkg/
+packaging/*/*.pkg.tar.*
+packaging/*/*.tar.gz

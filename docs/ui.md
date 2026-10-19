@@ -26,3 +26,10 @@ Don't use `window.confirm`/`alert`/`prompt`: embedded browsers suppress them. Us
 - A copper arcade token ("GOOD FOR 1M TOKENS", raised rim with dots) in front of a slot machine, token at the lower left.
 - Light always comes from the top left.
 - The header token's hover tilt is real CSS 3D (`web/logo-fx.js`): the perspective is centered on the coin, the edge is a stack of discs, and Lambert diffuse plus Blinn–Phong specular are computed per frame from the face normal. A damped spring drives the angle and the frame loop stops once it settles; reduced motion keeps it still.
+
+## dmg background
+
+- Source: `design/dmg/make-dmg-bg.py` (gitignored, reuses the logo generator) writes `build/dmg-background.svg`; render `build/dmg-background.png` (660×460) and `@2x` with `render-svg.mjs`. electron-builder merges them into a retina `.background.tiff`.
+- A night-time arcade: the NOT ENOUGH TOKENS marquee, an INSERT TOKEN chase-light arrow from the app to Applications, spent tokens on the carpet, CREDITS 00.
+- Finder draws icon labels in black or white depending on its appearance, so they sit on mid-tone brass plates (both above 4:1). Icon positions in `package.json` (`dmg.contents`) must match `APP`/`APPS` in the script.
+- The window height includes the title bar, so the canvas runs past the visible bottom; keep content above y≈410.

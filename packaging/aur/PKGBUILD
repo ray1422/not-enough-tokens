@@ -1,0 +1,21 @@
+# AUR package: the tagged source from GitHub, on the system electron.
+# The release workflow fills in pkgver and sha256sums for each tag and attaches
+# the result (with .SRCINFO) to the GitHub Release, ready to push to the AUR.
+# For a build from a local checkout, use packaging/arch/PKGBUILD instead.
+pkgname=not-enough-tokens
+pkgver=0.1.1
+pkgrel=1
+pkgdesc='Claude Code usage across machines, with a local web console'
+arch=('any')
+url='https://github.com/ray1422/not-enough-tokens'
+license=('BSD-3-Clause')
+depends=('electron' 'openssh' 'curl')
+optdepends=('git: group usage by repository')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+package() {
+  cd "$pkgname-$pkgver"
+  DESTDIR="$pkgdir" PREFIX=/usr ELECTRON_BIN=/usr/bin/electron sh packaging/linux/install.sh
+  install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
+}

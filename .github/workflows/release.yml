@@ -1,14 +1,13 @@
-# Linux packages, only around the release branch to save Actions minutes on this
-# private repo:
-#   PR into release  -> build everything as a check, keep nothing
-#   push to release  -> build, then publish GitHub Release v<package.json version>
-#                       with the AppImages and the Arch package
-# The macOS dmg is built locally (`npm run dist:mac`) and can be added to the release by hand.
+# Packages for every platform.
+#   PR into main or release -> build everything as a check, keep nothing
+#   push to release         -> build, publish GitHub Release v<package.json version>
+#                              (AppImages, dmg, Arch package), then attach the
+#                              AUR PKGBUILD + .SRCINFO for that tag
 name: release
 
 on:
   pull_request:
-    branches: [release]
+    branches: [main, release]
   push:
     branches: [release]
   workflow_dispatch:
@@ -19,6 +18,10 @@ permissions:
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Upload and publish only for the release branch itself.
+  PUBLISH: ${{ github.ref == 'refs/heads/release' && github.event_name != 'pull_request' }}
 
 jobs:
   appimage:
@@ -31,11 +34,28 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run dist:linux
-      - if: github.ref == 'refs/heads/release' && github.event_name != 'pull_request'
+      - if: env.PUBLISH == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: appimage
           path: dist/*.AppImage
+          if-no-files-found: error
+
+  dmg:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run dist:mac
+      - if: env.PUBLISH == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dmg
+          path: dist/*.dmg
           if-no-files-found: error
 
   arch:
@@ -49,7 +69,7 @@ jobs:
           useradd -m builder
           chown -R builder .
           su builder -c 'cd packaging/arch && makepkg --nodeps --noconfirm'
-      - if: github.ref == 'refs/heads/release' && github.event_name != 'pull_request'
+      - if: env.PUBLISH == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: arch
@@ -66,29 +86,59 @@ jobs:
 
   publish:
     if: github.ref == 'refs/heads/release' && github.event_name != 'pull_request'
-    needs: [appimage, arch, nix]
+    needs: [appimage, dmg, arch, nix]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           path: out
           merge-multiple: true
-      - name: Publish v<version>
+      - id: tag
+        run: echo "tag=v$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
+      - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
-          tag="v$(node -p 'require("./package.json").version')"
-          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
             # Same version again: refresh its files only if the tag is this commit
             # (the peeled ^{} line, listed last, is the commit of an annotated tag).
-            if [ "$(git ls-remote --tags origin "refs/tags/$tag" "refs/tags/$tag^{}" | tail -1 | cut -f1)" != "$GITHUB_SHA" ]; then
-              echo "::error::$tag already exists on another commit. Bump the version in package.json."
+            if [ "$(git ls-remote --tags origin "refs/tags/$TAG" "refs/tags/$TAG^{}" | tail -1 | cut -f1)" != "$GITHUB_SHA" ]; then
+              echo "::error::$TAG already exists on another commit. Bump the version in package.json."
               exit 1
             fi
-            gh release upload "$tag" out/* --clobber
+            gh release upload "$TAG" out/* --clobber
           else
-            gh release create "$tag" out/* --target "$GITHUB_SHA" --title "$tag" --generate-notes
+            gh release create "$TAG" out/* --target "$GITHUB_SHA" --title "$TAG" --generate-notes
           fi
+
+  # The AUR package builds from the tag's source tarball, which only exists once the
+  # release is published: fill in its checksum, prove it builds, attach the files.
+  aur:
+    needs: publish
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    permissions:
+      contents: write
+    steps:
+      - run: pacman -Syu --noconfirm --needed base-devel git github-cli
+      - uses: actions/checkout@v4
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.publish.outputs.tag }}
+        run: |
+          useradd -m builder
+          mkdir -p /tmp/aur && cp packaging/aur/PKGBUILD /tmp/aur/
+          cd /tmp/aur
+          url="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/$TAG.tar.gz"
+          sum=$(curl -fsSL "$url" | sha256sum | cut -d' ' -f1)
+          sed -i -e "s/^pkgver=.*/pkgver=${TAG#v}/" -e "s/^sha256sums=.*/sha256sums=('$sum')/" PKGBUILD
+          chown -R builder .
+          su builder -c 'makepkg --nodeps --noconfirm && makepkg --printsrcinfo > .SRCINFO'
+          mkdir upload && cp PKGBUILD upload/PKGBUILD && cp .SRCINFO upload/SRCINFO
+          gh release upload "$TAG" upload/PKGBUILD upload/SRCINFO --clobber -R "$GITHUB_REPOSITORY"

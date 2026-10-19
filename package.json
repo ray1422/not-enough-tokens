@@ -1,7 +1,8 @@
 {
   "name": "not-enough-tokens",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Incremental Claude Code usage tracker across machines, with a web console",
+  "license": "BSD-3-Clause",
   "type": "module",
   "main": "electron/main.js",
   "bin": {
@@ -33,7 +34,8 @@
       "electron/**",
       "src/**",
       "web/**",
-      "package.json"
+      "package.json",
+      "LICENSE"
     ],
     "mac": {
       "target": [
@@ -46,7 +48,12 @@
       ],
       "icon": "build/icon.png",
       "category": "public.app-category.developer-tools",
-      "identity": null
+      "identity": "-",
+      "artifactName": "not-enough-tokens-${version}-${arch}.${ext}",
+      "extendInfo": {
+        "NSLocalNetworkUsageDescription": "Not Enough Tokens connects over SSH to the machines you add, including ones on your local network, to read their Claude Code usage."
+      },
+      "hardenedRuntime": false
     },
     "linux": {
       "target": [
@@ -62,6 +69,26 @@
           "StartupWMClass": "not-enough-tokens"
         }
       }
+    },
+    "dmg": {
+      "background": "build/dmg-background.png",
+      "iconSize": 100,
+      "window": {
+        "width": 660,
+        "height": 448
+      },
+      "contents": [
+        {
+          "x": 170,
+          "y": 238
+        },
+        {
+          "x": 490,
+          "y": 238,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     }
   }
 }

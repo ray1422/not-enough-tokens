@@ -25,7 +25,7 @@ stdenvNoCC.mkDerivation {
 
     app=$out/lib/not-enough-tokens
     mkdir -p $app
-    cp -r package.json electron src web $app/
+    cp -r package.json LICENSE electron src web $app/
 
     path=${lib.makeBinPath [ openssh curl git ]}
     makeWrapper ${lib.getExe electron} $out/bin/not-enough-tokens \
@@ -45,6 +45,7 @@ stdenvNoCC.mkDerivation {
   meta = {
     description = "Claude Code usage across machines, with a local web console";
     homepage = "https://github.com/ray1422/not-enough-tokens";
+    license = lib.licenses.bsd3;
     platforms = lib.platforms.linux;
     mainProgram = "not-enough-tokens";
   };
