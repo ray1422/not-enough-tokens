@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Not Enough Tokens</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">not-enough-tokens<span class="cursor">_</span></div>
+    <div id="machine-chips" class="chips" aria-label="machines"></div>
+    <div class="actions">
+      <button id="btn-sync" class="primary">Sync</button>
+      <button id="btn-machines" title="Machines">Machines</button>
+      <button id="btn-prices" title="Prices">Prices</button>
+      <button id="btn-settings" title="Settings">Settings</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="unpriced-banner" class="banner" hidden></div>
+
+    <section class="heroes" id="heroes"></section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div class="seg" id="seg-period">
+          <button data-v="day">日</button><button data-v="week" class="on">週</button><button data-v="month">月</button>
+        </div>
+        <div class="seg" id="seg-metric">
+          <button data-v="cost" class="on">牌價 USD</button><button data-v="tokens">Tokens</button>
+        </div>
+        <div class="seg" id="seg-range"></div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div id="chart" class="chart"></div>
+      <div class="hint" id="chart-hint">點選長條可只看該期間的 model / project 明細</div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>By model</h2><span class="scope" id="scope-model"></span></div>
+      <div id="tbl-model" class="tbl-wrap"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>By project</h2>
+        <div class="seg" id="seg-proj">
+          <button data-v="repo" title="依 git remote 合併：worktree、子目錄、多份 clone 都算同一個">Repo</button><button data-v="dir" title="依 repo 根目錄：合併 worktree 與子目錄，不同 clone 分開">目錄</button><button data-v="path" title="原始工作目錄">完整路徑</button>
+        </div>
+        <span class="scope" id="scope-project"></span></div>
+      <div id="tbl-project" class="tbl-wrap"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Periods</h2></div>
+      <div id="tbl-period" class="tbl-wrap"></div>
+    </section>
+  </main>
+
+  <section class="console" id="console">
+    <div class="console-head" id="console-toggle"><span>console</span><span id="console-status"></span></div>
+    <pre id="log"></pre>
+  </section>
+
+  <div id="tooltip" class="tooltip" hidden></div>
+  <div id="modal-root"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
