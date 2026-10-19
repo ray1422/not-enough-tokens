@@ -5,7 +5,7 @@ import {
   totalTok, unpricedTok, wallOf,
 } from './core.js';
 import { setLocale, t, translateDom } from './i18n.js';
-import { initSettings, refreshSettings, showSettings } from './settings.js';
+import { askHostKey, askMerge, initSettings, refreshSettings, showSettings } from './settings.js';
 import { initLogoFx } from './logo-fx.js';
 
 function* rows() {
@@ -147,6 +147,7 @@ function renderAll() {
 function machineTitle(m) {
   return [
     m.type === 'local' ? t('chips.local') : `ssh ${m.user ? m.user + '@' : ''}${m.host}${m.port ? ':' + m.port : ''}`,
+    m.lastHost && m.lastHost !== m.host ? t('m.via', { h: m.lastHost }) : '',
     m.lastAddress ? t('chips.lastAddress', { a: m.lastAddress }) : '',
     t('chips.synced', { ago: fmtAgo(m.lastSyncAt) }),
     m.lastError ? t('chips.error', { e: m.lastError }) : '',
@@ -600,6 +601,12 @@ function connectEvents() {
       S.syncing.clear();
       await loadState();
       await loadUsage();
+      renderChips();
+      for (const id of Object.keys(d.results || {})) {
+        const m = S.machines.find((x) => x.id === id);
+        if (m?.twinOf) await askMerge(m);
+        else if (m?.hostKeyIssue) await askHostKey(m);
+      }
     }
     renderChips();
   });

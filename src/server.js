@@ -4,9 +4,10 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dataDir, readJson, writeAtomic, writeJson } from './core/store.js';
-import { addMachine, loadMachines, removeMachine, updateMachine } from './core/machines.js';
+import { addMachine, loadMachines, mergeInto, patchMachine, removeMachine, updateMachine } from './core/machines.js';
 import { KINDS, loadPrices, lookup, refreshPrices, savePrices } from './core/pricing.js';
 import { COLS, Ledger, readUsageRows } from './core/ledger.js';
 import { loadProjects } from './core/projects.js';
@@ -71,6 +72,24 @@ async function runSync(ids) {
   );
   broadcast('sync', { state: 'done', results: job.results });
   job = null;
+}
+
+// ---------- host key changed ----------
+// Removes the main host's old key from the known_hosts file ssh named, so the next
+// connection asks to trust the new key (and the fingerprint check still has to pass
+// before anything is read). Only acts on what the last sync recorded, never on input.
+function forgetHostKey(id) {
+  const m = loadMachines().find((x) => x.id === id);
+  const hk = m?.hostKeyIssue;
+  if (!hk?.main || !hk.name || !hk.file || /^-/.test(hk.name)) throw new Error('nothing to forget');
+  if (!fs.statSync(hk.file).isFile()) throw new Error('known_hosts file not found');
+  return new Promise((resolve, reject) => {
+    execFile('ssh-keygen', ['-R', hk.name, '-f', hk.file], (err, _out, stderr) => {
+      if (err) return reject(new Error(stderr.trim() || err.message));
+      patchMachine(id, { hostKeyIssue: null, lastError: null });
+      resolve({ ok: true });
+    });
+  });
 }
 
 // ---------- usage ----------
@@ -332,10 +351,17 @@ async function handle(req, res, ctx) {
   }
 
   if (p === '/api/machines' && method === 'POST') return send(res, 200, addMachine(await body(req)));
+  const fh = /^\/api\/machines\/([\w-]+)\/forget-hostkey$/.exec(p);
+  if (fh && method === 'POST') return send(res, 200, await forgetHostKey(fh[1]));
+  const mm = /^\/api\/machines\/([\w-]+)\/merge$/.exec(p);
+  if (mm && method === 'POST') {
+    const b = await body(req);
+    return send(res, 200, mergeInto(mm[1], String(b.into), { asMain: !!b.asMain }));
+  }
   let m = /^\/api\/machines\/([\w-]+)$/.exec(p);
   if (m && method === 'PUT') return send(res, 200, updateMachine(m[1], await body(req)));
   if (m && method === 'DELETE') {
-    removeMachine(m[1]);
+    removeMachine(m[1], { purge: url.searchParams.get('purge') === '1' });
     return send(res, 200, { ok: true });
   }
 

@@ -27,10 +27,10 @@ function controlDir() {
   return dir;
 }
 
-export function sshArgs(machine) {
+export function sshArgs(machine, { connectTimeout = 15 } = {}) {
   const a = [
     '-T',
-    '-o', 'ConnectTimeout=15',
+    '-o', `ConnectTimeout=${connectTimeout}`,
     '-o', 'ServerAliveInterval=15',
     '-o', 'ControlMaster=auto',
     '-o', `ControlPath=${controlDir()}/%C`,
@@ -45,7 +45,7 @@ export function sshArgs(machine) {
 }
 
 // Runs `script` on the remote with `sh -s`; streams (possibly gzipped) stdout to onData.
-function runRemote(machine, script, onData) {
+function runRemote(machine, script, onData, opts) {
   return new Promise((resolve, reject) => {
     const env = { ...process.env };
     if (askpass) {
@@ -59,7 +59,7 @@ function runRemote(machine, script, onData) {
       });
     }
     // detached: no controlling tty, so ssh must use SSH_ASKPASS instead of the terminal.
-    const child = spawn('ssh', sshArgs(machine), { env, stdio: ['pipe', 'pipe', 'pipe'], detached: true });
+    const child = spawn('ssh', sshArgs(machine, opts), { env, stdio: ['pipe', 'pipe', 'pipe'], detached: true });
     let stderr = '';
     let failed = null;
     const deliver = (c) => {
@@ -99,13 +99,27 @@ function runRemote(machine, script, onData) {
       if (failed) return reject(failed);
       if (code !== 0) {
         const msg = stderr.trim().split('\n').slice(-3).join(' | ') || `ssh exited with ${code}`;
-        return reject(new Error(msg));
+        const err = Object.assign(new Error(msg), { sshFailed: code === 255 }); // 255: ssh itself failed
+        const hk = code === 255 && hostKeyChanged(stderr);
+        if (hk) Object.assign(err, { message: `the host key of ${hk.name} has changed`, hostKeyChanged: hk });
+        return reject(err);
       }
       resolve();
     });
     child.stdin.on('error', () => {});
     child.stdin.end(script);
   });
+}
+
+// ssh refuses outright (no prompt) when a known host answers with another key: the
+// address may now belong to someone else, or the box was reinstalled. Pull out what
+// the console needs to explain it and, if the user says so, forget the old key.
+export function hostKeyChanged(stderr) {
+  if (!/REMOTE HOST IDENTIFICATION HAS CHANGED/.test(stderr)) return null;
+  const fp = /sent by the remote host is\s+(SHA256:[A-Za-z0-9+/=]+)/.exec(stderr);
+  const off = /Offending \S+ key in (.+):(\d+)\s*$/m.exec(stderr);
+  const name = /Host key for (\S+) has changed/.exec(stderr);
+  return { fingerprint: fp?.[1] || null, file: off?.[1] || null, line: off ? Number(off[2]) : null, name: name?.[1] || null };
 }
 
 function listScript(extraRoots) {
@@ -177,15 +191,58 @@ if command -v gzip >/dev/null 2>&1; then run | gzip -1 -c; else run; fi
 
 const MARK = '@@NET ';
 
-export function createSshSource(machine) {
+export function createSshSource(machine, { log = () => {} } = {}) {
+  // `host`, then `altHosts` in order. The first one that answers is used for the
+  // rest of the sync; one that answers as a different machine is skipped.
+  const hosts = [machine.host, ...(machine.altHosts || [])].filter(Boolean);
+  let target = { ...machine, host: hosts[0] };
   return {
     async info() {
       const r = await this._list();
-      return { fingerprint: r.fingerprint, address: r.address, mode: this._mode(r) };
+      return { fingerprint: r.fingerprint, address: r.address, host: target.host, mode: this._mode(r) };
     },
 
     async _list() {
       if (this._cached) return this._cached;
+      const errors = [];
+      let hostKeyIssue = null;
+      for (const [n, host] of hosts.entries()) {
+        const last = n === hosts.length - 1;
+        // A fallback is declared to be the same box, so verify it against the host key
+        // already trusted for the main host instead of asking again for every address.
+        // A different key still fails.
+        const alias = n > 0 && !(machine.sshOptions || []).some((o) => /^HostKeyAlias\b/i.test(o));
+        target = { ...machine, host, sshOptions: [...(machine.sshOptions || []), ...(alias ? [`HostKeyAlias=${hosts[0]}`] : [])] };
+        log(`connecting to ${host}`);
+        try {
+          // Fail over quickly when another address is left to try.
+          const r = await this._listFrom(target, last ? 15 : 6);
+          if (!last && machine.fingerprint && r.fingerprint !== machine.fingerprint) {
+            errors.push(`${host}: a different machine (id ${r.fingerprint})`);
+            log(`${host} is a different machine; trying the next address`);
+            continue;
+          }
+          this._cached = r;
+          return r;
+        } catch (e) {
+          if (e.hostKeyChanged) {
+            // Fallbacks share the main host's key entry (HostKeyAlias), so only the main
+            // host's entry can be forgotten from the console.
+            Object.assign(e.hostKeyChanged, { host, main: n === 0 });
+            hostKeyIssue ??= e.hostKeyChanged;
+          }
+          if (last || !e.sshFailed) {
+            const out = hosts.length > 1 ? new Error([...errors, `${host}: ${e.message}`].join('; ')) : e;
+            out.hostKeyChanged = hostKeyIssue;
+            throw out;
+          }
+          errors.push(`${host}: ${e.message}`);
+          log(e.hostKeyChanged ? `${host}: host key changed; trying the next address` : `${host} unreachable; trying the next address`);
+        }
+      }
+    },
+
+    async _listFrom(t, connectTimeout) {
       const files = new Map();
       let fingerprint = null, address = null, python = null;
       const sp = new LineSplitter((buf) => {
@@ -198,9 +255,8 @@ export function createSshSource(machine) {
           if (m) files.set(m[3], { path: m[3], ino: m[1], size: Number(m[2]) });
         }
       });
-      await runRemote(machine, listScript(machine.extraRoots || []), (c) => sp.push(c));
-      this._cached = { fingerprint, address, python, files: [...files.values()] };
-      return this._cached;
+      await runRemote(t, listScript(machine.extraRoots || []), (c) => sp.push(c), { connectTimeout });
+      return { fingerprint, address, python, files: [...files.values()] };
     },
 
     // machine.readMode: 'auto' (default) | 'python' | 'shell'
@@ -216,7 +272,7 @@ export function createSshSource(machine) {
     },
 
     exec(script, onData) {
-      return runRemote(machine, script, onData);
+      return runRemote(target, script, onData);
     },
 
     // onLine(i, line) for raw lines (shell mode) or onLine(i, null, record) (python mode).
@@ -260,7 +316,7 @@ export function createSshSource(machine) {
         });
         const batch = todo.slice(i, j);
         const script = mode === 'python' ? pyScript(listed.python, batch) : readScript(batch);
-        await runRemote(machine, script, (c) => sp.push(c));
+        await runRemote(target, script, (c) => sp.push(c));
         // Cursors only move after the whole batch arrived; a broken connection just
         // means those bytes get read again (dedupe makes that harmless).
         for (const idx of ended) await onDone(base + idx, newOffset.get(idx));

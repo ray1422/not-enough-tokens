@@ -114,6 +114,8 @@ function machineForm(m = {}) {
   return `<div class="formgrid">
     <label class="f">${esc(t('m.name'))}<input name="name" value="${esc(m.name || '')}" placeholder="linux-box"></label>
     <label class="f wide">${esc(t('m.host'))}<input name="host" value="${esc(m.host || '')}" placeholder="192.168.1.23" ${off}></label>
+    ${m.type === 'local' ? '' : `<label class="f full">${esc(t('m.altHosts'))}
+      <textarea name="altHosts" rows="2" placeholder="my-box.tailnet.ts.net">${esc((m.altHosts || []).join('\n'))}</textarea></label>`}
     <label class="f">${esc(t('m.port'))}<input name="port" value="${esc(m.port || '')}" placeholder="22" ${off}></label>
     <label class="f">${esc(t('m.user'))}<input name="user" value="${esc(m.user || '')}" placeholder="${esc(t('m.userPh'))}" ${off}></label>
     <label class="f wide">${esc(t('m.identity'))}<input name="identityFile" value="${esc(m.identityFile || '')}" placeholder="~/.ssh/id_ed25519" ${off}></label>
@@ -137,10 +139,13 @@ function renderMachines() {
     <div class="mlist">${S.machines
       .map((m) => {
         const where = m.type === 'local' ? t('m.local') : `ssh ${m.user ? m.user + '@' : ''}${m.host}${m.port ? ':' + m.port : ''}`;
-        const meta = [where, m.lastAddress ? t('m.lastAddress', { a: m.lastAddress }) : '', t('m.synced', { ago: fmtAgo(m.lastSyncAt) })].filter(Boolean).join(' · ');
+        const via = m.lastHost && m.lastHost !== m.host ? t('m.via', { h: m.lastHost }) : '';
+        const meta = [where, via, m.lastAddress ? t('m.lastAddress', { a: m.lastAddress }) : '', t('m.synced', { ago: fmtAgo(m.lastSyncAt) })].filter(Boolean).join(' · ');
         return `<div class="mcard" data-id="${esc(m.id)}">
           <div class="mrow"><b>${esc(m.name)}</b>
-            <span class="btns"><button data-act="sync">${esc(t('m.sync'))}</button><button data-act="edit">${esc(t('m.edit'))}</button>${
+            <span class="btns">${m.twinOf ? `<button data-act="merge" class="primary">${esc(t('m.merge'))}</button>` : ''}${
+              m.hostKeyIssue ? `<button data-act="hostkey" class="danger">${esc(t('m.hostKey'))}</button>` : ''
+            }<button data-act="sync">${esc(t('m.sync'))}</button><button data-act="edit">${esc(t('m.edit'))}</button>${
               m.type === 'local' ? '' : `<button data-act="del" class="danger">${esc(t('m.remove'))}</button>`
             }</span></div>
           <div class="meta">${esc(meta)}${m.fingerprint ? `<br>${esc(t('m.id', { id: m.fingerprint }))}` : ''}</div>
@@ -191,13 +196,16 @@ function renderMachines() {
           await ctx.loadState();
           renderMachines();
         }
-        if (act === 'del' && (await confirmDialog(t('m.confirmRemove'), t('m.remove')))) {
-          await api('/api/machines/' + id, { method: 'DELETE' });
+        const del = act === 'del' && (await confirmDialog(t('m.confirmRemove'), t('m.remove'), t('m.purge')));
+        if (del) {
+          await api('/api/machines/' + id + (del.checked ? '?purge=1' : ''), { method: 'DELETE' });
           await ctx.loadState();
           await ctx.loadUsage();
           renderMachines();
         }
         if (act === 'sync') ctx.startSync([id]);
+        if (act === 'merge') await askMerge(S.machines.find((x) => x.id === id));
+        if (act === 'hostkey') await askHostKey(S.machines.find((x) => x.id === id));
       } catch (err) {
         showErr(err);
       }
@@ -269,8 +277,61 @@ async function renderPrices() {
   });
 }
 
+// A new entry whose first sync found an existing machine (`twinOf`): offer to fold
+// its address into that machine instead of keeping a duplicate.
+export async function askMerge(m) {
+  const twin = m && S.machines.find((x) => x.id === m.twinOf);
+  if (!twin) return;
+  const choice = await new Promise((resolve) => {
+    const { el, close } = modal(
+      `<h3>${esc(t('m.twinTitle'))}</h3>
+      <p>${esc(t('m.twinMsg', { host: m.host, name: twin.name }))}</p>
+      <div class="foot"><button data-v="">${esc(t('m.cancel'))}</button><button data-v="main">${esc(t('m.twinMain'))}</button><button class="primary" data-v="alt">${esc(t('m.twinAlt'))}</button></div>`,
+      { onClose: () => resolve('') },
+    );
+    el.querySelectorAll('[data-v]').forEach((b) => (b.onclick = () => (resolve(b.dataset.v), close())));
+    el.querySelector('[data-v="alt"]').focus();
+  });
+  if (!choice) return;
+  await api(`/api/machines/${m.id}/merge`, { method: 'POST', body: { into: twin.id, asMain: choice === 'main' } });
+  S.selected.delete(m.id);
+  store.set('selected', [...S.selected]);
+  await ctx.loadState();
+  refreshSettings();
+  ctx.renderAll();
+}
+
+// ssh refused because a known address now answers with another host key: a floating
+// IP handed to someone else, or a reinstall. Explain, and only for the main host offer
+// to forget the old key; the next connection then asks to trust the new one, and the
+// machine fingerprint must still match before anything is read.
+export async function askHostKey(m) {
+  const hk = m?.hostKeyIssue;
+  if (!hk) return;
+  const forget = await new Promise((resolve) => {
+    const { el, close } = modal(
+      `<h3>${esc(t('hk.title'))}</h3>
+      <p>${esc(t('hk.msg', { host: hk.host, name: m.name }))}</p>
+      ${hk.fingerprint ? `<pre class="prompt">${esc(t('hk.newKey'))}\n${esc(hk.fingerprint)}</pre>` : ''}
+      <p class="note">${esc(t(hk.main ? 'hk.mainNote' : 'hk.altNote'))}</p>
+      <div class="foot"><button class="primary" data-v="0">${esc(t('m.cancel'))}</button>${
+        hk.main ? `<button class="danger" data-v="1">${esc(t('hk.forget'))}</button>` : ''
+      }</div>`,
+      { onClose: () => resolve(false) },
+    );
+    el.querySelectorAll('[data-v]').forEach((b) => (b.onclick = () => (resolve(b.dataset.v === '1'), close())));
+    el.querySelector('[data-v="0"]').focus();
+  });
+  if (!forget) return;
+  await api(`/api/machines/${m.id}/forget-hostkey`, { method: 'POST' });
+  await ctx.loadState();
+  refreshSettings();
+  ctx.startSync([m.id]);
+}
+
 // window.confirm() is unavailable in embedded browsers (it returns false at once), so use our own dialog.
-function confirmDialog(message, okLabel) {
+// Resolves false, or { checked } for the optional checkbox.
+function confirmDialog(message, okLabel, checkLabel) {
   return new Promise((resolve) => {
     let done = false;
     const finish = (v) => {
@@ -281,10 +342,11 @@ function confirmDialog(message, okLabel) {
     };
     const { el, close } = modal(
       `<p>${esc(message)}</p>
+      ${checkLabel ? `<label class="check"><input type="checkbox" id="cd-check"> ${esc(checkLabel)}</label>` : ''}
       <div class="foot"><button data-v="0">${esc(t('m.cancel'))}</button><button class="primary danger-fill" data-v="1">${esc(okLabel)}</button></div>`,
       { onClose: () => finish(false) },
     );
-    el.querySelectorAll('[data-v]').forEach((b) => (b.onclick = () => finish(b.dataset.v === '1')));
+    el.querySelectorAll('[data-v]').forEach((b) => (b.onclick = () => finish(b.dataset.v === '1' && { checked: !!el.querySelector('#cd-check')?.checked })));
     el.querySelector('[data-v="0"]').focus();
   });
 }

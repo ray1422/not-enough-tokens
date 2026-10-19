@@ -1,6 +1,6 @@
 // Incremental sync of one machine: only bytes past each file's cursor are read.
 import { Ledger, SEEN_RETENTION_DAYS } from './ledger.js';
-import { getMachine, loadMachines, patchMachine } from './machines.js';
+import { adoptOrphan, findOrphans, getMachine, loadMachines, patchMachine, writeIdentity } from './machines.js';
 import { parseLine, projectFromPath } from './parse.js';
 import { loadPrices } from './pricing.js';
 import { resolveNewProjects } from './projects.js';
@@ -17,8 +17,8 @@ export async function syncMachine(id, log = () => {}, patch = patchMachine) {
   const started = Date.now();
   try {
     const m = getMachine(id);
-    const src = m.type === 'local' ? createLocalSource(m) : createSshSource(m);
-    log(m.type === 'local' ? 'scanning local files' : `connecting to ${m.host}`);
+    const src = m.type === 'local' ? createLocalSource(m) : createSshSource(m, { log });
+    if (m.type === 'local') log('scanning local files');
 
     const info = await src.info();
     if (m.fingerprint && info.fingerprint !== m.fingerprint) {
@@ -28,8 +28,23 @@ export async function syncMachine(id, log = () => {}, patch = patchMachine) {
       );
     }
     const twin = loadMachines().find((x) => x.id !== id && x.fingerprint && x.fingerprint === info.fingerprint);
-    if (twin) throw new Error(`this is the same machine as "${twin.name}"; not syncing it twice`);
-    patch(id, { fingerprint: info.fingerprint, ...(info.address ? { lastAddress: info.address } : {}) });
+    if (twin) {
+      patch(id, { twinOf: twin.id }); // the console offers to fold this address into the twin
+      throw new Error(`this is the same machine as "${twin.name}"; not syncing it twice`);
+    }
+    if (!m.fingerprint) {
+      // First contact: if this box was removed and added back, continue from its old data.
+      const orphan = findOrphans(info.fingerprint)[0];
+      if (orphan && adoptOrphan(id, orphan)) log(`same machine as earlier data ${orphan}; continuing from it`);
+    }
+    writeIdentity(id, info.fingerprint);
+    patch(id, {
+      twinOf: null,
+      hostKeyIssue: null,
+      fingerprint: info.fingerprint,
+      ...(info.address ? { lastAddress: info.address } : {}),
+      ...(info.host ? { lastHost: info.host } : {}),
+    });
     if (info.mode) log(`read mode: ${info.mode}`);
 
     const files = await src.list();
@@ -83,7 +98,7 @@ export async function syncMachine(id, log = () => {}, patch = patchMachine) {
     log(`done: ${result.messages} message updates in ${(result.ms / 1000).toFixed(1)}s`, { progress: 1 });
     return result;
   } catch (e) {
-    patch(id, { lastError: e.message });
+    patch(id, { lastError: e.message, hostKeyIssue: e.hostKeyChanged || null });
     throw e;
   } finally {
     running.delete(id);
