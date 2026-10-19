@@ -6,6 +6,7 @@ import {
 } from './core.js';
 import { setLocale, t, translateDom } from './i18n.js';
 import { initSettings, refreshSettings, showSettings } from './settings.js';
+import { initLogoFx } from './logo-fx.js';
 
 function* rows() {
   if (!S.usage) return;
@@ -707,6 +708,7 @@ function wire() {
 }
 
 applyTheme();
+initLogoFx($('.brand'));
 initSettings({ loadState, loadUsage, renderAll, startSync, log });
 wire();
 await loadState();

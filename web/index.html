@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Not Enough Tokens</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,7 +18,13 @@
   </svg>
 
   <header class="topbar">
-    <a class="brand" href="#">not-enough-tokens<span class="cursor">_</span></a>
+    <a class="brand" href="#">
+      <span class="logo" aria-hidden="true">
+        <img src="logo-machine.svg" alt="">
+        <span class="logo-token"><span class="coin-edge"></span><img class="face" src="logo-token.svg" alt=""><i class="glint"></i></span>
+      </span>
+      <span class="wordmark">not-enough-tokens</span>
+    </a>
     <div class="chips-wrap" id="chips-wrap">
       <div id="machine-chips" class="chips" aria-label="machines"></div>
       <button id="chips-more" class="chip more" hidden aria-haspopup="true" aria-expanded="false"><span></span><svg class="ic sm"><use href="#i-chevron"/></svg></button>

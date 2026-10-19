@@ -35,13 +35,14 @@ There are no runtime dependencies; Node ≥ 20 is enough. Data lives in `~/.loca
 
 ## UI rules
 
-- **Curves must be continuous: no sharp corners and no circular-arc joins.**
-  - Rounded shapes use G2 (curvature-continuous) corners: CSS `corner-shape: squircle` with the `--r-*` radius tokens. Never use raw `border-radius` values.
-  - For SVG paths, use cubic Béziers whose handles keep zero curvature at the joins, not `Q` or arc commands.
-  - Apply this to any new component, icon or chart mark.
+- **Rounded corners must be curvature-continuous (G2), never a circular arc.** This rule is about how rounded corners are drawn. It does not ban sharp features: ridges, glyph strokes, chevrons and other deliberate points are fine.
+  - In CSS, use `corner-shape: squircle` with the `--r-*` radius tokens. Never use raw `border-radius` values.
+  - In SVG, draw rounded corners with cubic Béziers whose handles keep zero curvature at the joins, not with `Q` or arc commands.
+  - Apply this wherever a new component, icon or chart mark has rounded corners.
 - Colors and fonts follow Anthropic's public brand guidelines.
-  - Use the warm neutrals and the orange accent, Poppins for UI and Lora for prose. Numbers use the monospace face.
+  - Use the warm neutrals and the accent, which is shifted from the brand orange toward copper to match the logo. Use Poppins for UI and Lora for prose; numbers use the monospace face.
   - Use the CSS tokens in `style.css`.
 - The chart palette (`--s1`…`--s5`) was validated for color-vision deficiency in light and dark mode. Re-validate it before changing any series color.
+- **Logo:** the source is `design/logo/` (gitignored). `make-logo.py` writes `build/icon.svg`, `web/icon.svg`, `web/logo*.svg`, and `render-svg.mjs` renders the PNG. The header token's hover tilt is real CSS 3D with per-frame lighting (`web/logo-fx.js`). Light always comes from the top left.
 - All user-visible text goes through `t()` in `web/i18n.js`, with both `zh-TW` and `en` entries.
 - Light and dark modes are both required. Every color is a token defined for both.

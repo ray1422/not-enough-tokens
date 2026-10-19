@@ -1,8 +1,9 @@
 /* Visual language follows Anthropic's public brand guidelines (anthropics/skills,
    brand-guidelines): warm neutrals #141413 / #faf9f5 / #b0aea5 / #e8e6dc, accent
-   orange #d97757, Poppins for UI and headings, Lora for prose. Numbers stay in a
-   monospace face so columns line up. Chart colors are anchored on the brand orange
-   and blue and validated for color-vision deficiency in both modes. */
+   orange #d97757, Poppins for UI and headings, Lora for prose. The accent is pushed
+   from that orange toward copper to match the token logo. Numbers stay in a monospace
+   face so columns line up. Chart colors are validated for color-vision deficiency in
+   both modes. */
 @import url("https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Poppins:wght@400;500;600&display=swap");
 
 :root {
@@ -15,13 +16,15 @@
   --text: #141413;
   --text-2: #5e5d59;
   --muted: #87867f;
-  --accent: #d97757;         /* brand orange: highlights, focus, current period */
-  --accent-strong: #c6613f;  /* primary buttons (white text stays readable) */
-  --accent-soft: #f5e4dc;
+  --accent: #c97a47;         /* copper: highlights, focus, current period */
+  --accent-strong: #a95f32;  /* primary buttons: white text 4.8:1 */
+  --accent-hover: #93512a;
+  --accent-soft: #f3e2d6;
+  --link: #a95f32;           /* text links: 4.6:1 on the page */
   --danger: #b53333;
   --good: #3f8a4a;
   --s1: #3d7cc9; /* input */
-  --s2: #d97757; /* output */
+  --s2: #c97a47; /* output */
   --s3: #159a9c; /* cache read */
   --s4: #c99a1e; /* cache write 5m */
   --s5: #a95ca8; /* cache write 1h */
@@ -65,13 +68,15 @@
     --text: #faf9f5;
     --text-2: #c2c0b6;
     --muted: #8f8d85;
-    --accent: #d97757;
-    --accent-strong: #c6613f;
-    --accent-soft: #3a2a23;
+    --accent: #dc905d;
+    --accent-strong: #a95f32;
+    --accent-hover: #93512a;
+    --accent-soft: #3a2a20;
+    --link: #dc905d;
     --danger: #e06c6c;
     --good: #6fb36f;
     --s1: #3d7cc9;
-    --s2: #cf6e4f;
+    --s2: #c0703f;
     --s3: #159a9c;
     --s4: #b5871a;
     --s5: #a95ca8;
@@ -83,8 +88,9 @@
   color-scheme: dark;
   --bg: #141413; --surface: #1f1e1d; --surface-2: #2a2927; --border: #33322f; --border-strong: #46453f;
   --text: #faf9f5; --text-2: #c2c0b6; --muted: #8f8d85;
-  --accent: #d97757; --accent-strong: #c6613f; --accent-soft: #3a2a23; --danger: #e06c6c; --good: #6fb36f;
-  --s1: #3d7cc9; --s2: #cf6e4f; --s3: #159a9c; --s4: #b5871a; --s5: #a95ca8;
+  --accent: #dc905d; --accent-strong: #a95f32; --accent-hover: #93512a; --accent-soft: #3a2a20; --link: #dc905d;
+  --danger: #e06c6c; --good: #6fb36f;
+  --s1: #3d7cc9; --s2: #c0703f; --s3: #159a9c; --s4: #b5871a; --s5: #a95ca8;
   --grid: #2b2a27; --shadow: none;
 }
 
@@ -98,7 +104,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 [hidden] { display: none !important; }
-a { color: var(--accent-strong); }
+a { color: var(--link); }
 button, input, select, textarea { font: inherit; color: inherit; }
 button, .icon-btn {
   background: var(--surface);
@@ -113,10 +119,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   outline: 2px solid var(--accent); outline-offset: 2px;
 }
 button.primary { background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; font-weight: 500; }
-button.primary:hover { background: #b5562f; }
+button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 button.primary:disabled { opacity: .7; cursor: progress; }
 button.danger { color: var(--danger); }
-button.link { background: none; border: 0; padding: 0; color: var(--accent-strong); }
+button.link { background: none; border: 0; padding: 0; color: var(--link); }
 button.link:hover { text-decoration: underline; background: none; }
 input, select, textarea {
   background: var(--surface);
@@ -150,8 +156,38 @@ code { font: 12px var(--mono); background: var(--surface-2); padding: 1px 5px; b
   backdrop-filter: saturate(1.2) blur(8px);
   border-bottom: 1px solid var(--border);
 }
-.brand { font: 600 15px var(--sans); color: var(--text); text-decoration: none; white-space: nowrap; letter-spacing: -.2px; }
-.cursor { color: var(--accent); }
+.brand { display: inline-flex; align-items: center; gap: 10px; font: 600 15px var(--sans); color: var(--text); text-decoration: none; white-space: nowrap; letter-spacing: -.2px; }
+
+/* Logo: slot machine behind, token in front. On hover the token turns in real 3D
+   (web/logo-fx.js): perspective is part of the token's own transform so the vanishing
+   point is the coin centre, the edge is a stack of discs along Z (a true cylinder),
+   and face / edge / specular brightness come from a lighting model per frame.
+   Percentages come from design/logo/make-logo.py (mark geometry). */
+.logo { position: relative; display: block; height: 34px; aspect-ratio: 336 / 280; flex: none; }
+.logo img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.logo-token {
+  position: absolute; inset: 0;
+  transform-origin: 28.57% 61.43%;
+  transform-style: preserve-3d;
+  transform: perspective(var(--persp, 200px)) rotateY(var(--ry, 0deg)) rotateX(var(--rx, 0deg));
+}
+.logo-token .face { filter: brightness(var(--face, 1)); }
+.coin-edge { position: absolute; inset: 0; transform-style: preserve-3d; }
+.coin-edge i, .glint {
+  position: absolute; left: 2.38%; top: 30%; width: 52.38%; height: 62.86%;
+  border-radius: 50%; corner-shape: round; /* the coin is a circle */
+}
+.coin-edge i {
+  background: linear-gradient(135deg, #e7a476, #a65d31 55%, #6b3519);
+  filter: brightness(var(--edge, .5));
+  transform: translateZ(var(--z));
+}
+.glint {
+  background: radial-gradient(circle at var(--spec-x, 30%) var(--spec-y, 26%), rgba(255, 246, 236, var(--spec-a, 0)) 0%, rgba(255, 236, 214, calc(var(--spec-a, 0) * .35)) 30%, rgba(255, 236, 214, 0) 62%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
 .chips-wrap { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
 .chips { display: flex; gap: 6px; flex-wrap: nowrap; min-width: 0; overflow: hidden; }
 .chip {
@@ -242,7 +278,7 @@ td:first-child { max-width: 440px; overflow: hidden; text-overflow: ellipsis; fo
 tr.total td { font-weight: 600; border-top: 1px solid var(--border-strong); border-bottom: 0; }
 tr.clickable { cursor: pointer; }
 tr.clickable:hover td { background: var(--surface-2); }
-tr.current td:first-child { color: var(--accent-strong); font-weight: 500; }
+tr.current td:first-child { color: var(--link); font-weight: 500; }
 tr.child td { color: var(--text-2); background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
 tr.child td:first-child { padding-left: 32px; font-family: var(--mono); font-size: 11.5px; }
 .caret { display: inline-block; width: 16px; color: var(--muted); }
@@ -302,7 +338,7 @@ label.check { display: flex; gap: 8px; align-items: center; font-size: 13px; mar
 .console pre { margin: 0; padding: 0 24px; max-height: 0; overflow: auto; transition: max-height .2s; }
 .console.open pre { max-height: 220px; padding-bottom: 10px; }
 .console .err { color: var(--danger); }
-.console .m { color: var(--accent-strong); }
+.console .m { color: var(--link); }
 
 /* ---------- tooltip & dialogs ---------- */
 .tooltip {
@@ -337,7 +373,7 @@ label.check { display: flex; gap: 8px; align-items: center; font-size: 13px; mar
 }
 @media (max-width: 560px) {
   .topbar, main, #settings-view { padding-left: 16px; padding-right: 16px; }
-  .brand { display: none; }
+  .wordmark { display: none; }
   .legend { margin-left: 0; }
   .formgrid { grid-template-columns: 1fr; }
   .formgrid .wide { grid-column: auto; }
