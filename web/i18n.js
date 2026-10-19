@@ -124,7 +124,6 @@ const STRINGS = {
     'm.modeShell': 'shell: grep only, send back raw lines',
     'm.extraRoots': 'Extra paths (one projects folder per line; ~/.claude/projects and ~/.config/claude/projects are always included)',
     'm.resetFp': 'Reset machine identity (only if this host is now a different machine)',
-    'm.note': 'Remote machines are only read (find / stat / tail / grep / python). Password, key passphrase and host-key prompts appear here.',
     'm.confirmRemove': 'Remove this machine? Collected data stays on disk.',
 
     'p.unit': 'USD / 1M tokens',
@@ -274,7 +273,6 @@ const STRINGS = {
     'm.modeShell': 'shell：只用 grep，傳回原始行',
     'm.extraRoots': '額外路徑（每行一個 projects 目錄；預設已含 ~/.claude/projects 與 ~/.config/claude/projects）',
     'm.resetFp': '重設機器身分（host 換成另一台機器時才需要）',
-    'm.note': '對遠端只做唯讀操作（find / stat / tail / grep / python）。需要密碼、key passphrase 或確認 host key 時會在這裡跳出對話框。',
     'm.confirmRemove': '移除這台機器的設定？已收集的資料會保留在磁碟上。',
 
     'p.unit': 'USD / 1M tokens',

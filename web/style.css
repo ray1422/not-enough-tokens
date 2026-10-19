@@ -100,7 +100,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font: 14px/1.5 var(--sans);
-  padding-bottom: 44px;
+  padding-bottom: var(--console-h, 44px); /* kept in sync with the fixed console by app.js */
   -webkit-font-smoothing: antialiased;
 }
 [hidden] { display: none !important; }
@@ -310,7 +310,7 @@ tr.child td:first-child { padding-left: 32px; font-family: var(--mono); font-siz
 .formgrid .wide { grid-column: span 2; }
 .formgrid .full { grid-column: 1 / -1; }
 label.f { display: grid; gap: 4px; font-size: 12px; color: var(--text-2); font-weight: 500; }
-label.check { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-top: 10px; color: var(--text-2); }
+label.check { display: flex; gap: 8px; align-items: baseline; font-size: 13px; margin-top: 10px; color: var(--text-2); }
 .foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .row-r { display: flex; justify-content: space-between; align-items: center; margin: 4px 0 8px; }
 .err-text { color: var(--danger); font-size: 13px; }

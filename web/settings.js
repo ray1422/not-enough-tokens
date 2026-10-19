@@ -159,7 +159,6 @@ function renderMachines() {
         <div class="foot"><button id="m-add-cancel">${esc(t('m.cancel'))}</button><button class="primary" id="m-add">${esc(t('m.add'))}</button></div>
       </div>
     </div>
-    <p class="note">${esc(t('m.note'))}</p>
     <div class="err-text" id="m-err"></div>`;
 
   const showErr = (e) => ($('#m-err').textContent = e.message);

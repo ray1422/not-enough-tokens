@@ -662,6 +662,8 @@ function wire() {
     if (!$('#settings-view').hidden && /general/.test(location.hash)) showSettings('general');
   };
   $('#console-toggle').onclick = () => $('#console').classList.toggle('open');
+  // The console is fixed over the page bottom: reserve its current height so nothing ends up under it.
+  new ResizeObserver(([e]) => document.body.style.setProperty('--console-h', `${Math.ceil(e.borderBoxSize[0].blockSize)}px`)).observe($('#console'));
   $('#seg-period').onclick = (e) => {
     if (!e.target.dataset.v) return;
     S.period = e.target.dataset.v;

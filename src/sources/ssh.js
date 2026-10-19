@@ -1,6 +1,7 @@
 // Reads a remote machine's transcripts over the system `ssh` (so ~/.ssh/config,
 // agents, ProxyJump etc. all work). The remote side only runs read-only POSIX
-// tools: find, stat, tail, head, grep, awk, od, gzip. Nothing is installed there.
+// tools (find, stat, tail, head, grep, awk, od, gzip), or python3 in python read
+// mode (remote_reader.py, sent over stdin). Nothing is installed or written there.
 //
 // Passwords / passphrases / host-key questions go through SSH_ASKPASS, which
 // calls back into our HTTP server so the web console can show a prompt.
