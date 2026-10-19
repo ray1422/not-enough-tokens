@@ -46,3 +46,7 @@ The server only listens on 127.0.0.1 and every request needs a per-install token
 Everything lives in `~/.local/share/not-enough-tokens` (or `$XDG_DATA_HOME/not-enough-tokens`, or `NET_DATA_DIR`), as CSV and JSON. Prices come from the LiteLLM price table, and you can override any model by hand. Cost is fixed when the usage is collected, so later price changes don't rewrite history; usage of models without a price can be priced from the Prices tab.
 
 More detail: [docs/architecture.md](docs/architecture.md) (data model, sync, SSH, security) and [docs/ui.md](docs/ui.md) (design rules).
+
+## License
+
+BSD 3-Clause. See [LICENSE](LICENSE).
