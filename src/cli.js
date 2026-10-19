@@ -15,8 +15,10 @@ const flag = (name, def) => {
 
 if (cmd === 'serve') {
   const { startServer } = await import('./server.js');
-  const { url } = await startServer({ port: Number(flag('port', 4777)), host: flag('host', '127.0.0.1') });
-  console.log(`console: ${url}\ndata:    ${dataDir()}`);
+  const host = flag('host', '127.0.0.1');
+  if (!['127.0.0.1', 'localhost', '::1'].includes(host)) console.warn(`warning: listening on ${host} exposes your usage data to the network`);
+  const { openUrl } = await startServer({ port: Number(flag('port', 4777)), host });
+  console.log(`console: ${openUrl}\ndata:    ${dataDir()}`);
 } else if (cmd === 'sync') {
   const p = await refreshPrices();
   if (p.lastError) console.error(`price refresh failed, using last snapshot: ${p.lastError}`);

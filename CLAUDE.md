@@ -34,6 +34,7 @@ There are no runtime dependencies; Node ≥ 20 is enough. Data lives in `~/.loca
 - **Testing:** a full re-read is ~3 GB. Test on small inputs or a copy, and don't loop full syncs.
 
 ## UI rules
+- **No auth bypass.** The server binds to loopback, and every request needs the token. The token lives in `server-token`, is passed once as `?token=` and then kept in an HttpOnly, SameSite=Strict cookie. There is also a Host check and a custom header on writes. Don't add a way to turn this off.
 
 - **Rounded corners must be curvature-continuous (G2), never a circular arc.** This rule is about how rounded corners are drawn. It does not ban sharp features: ridges, glyph strokes, chevrons and other deliberate points are fine.
   - In CSS, use `corner-shape: squircle` with the `--r-*` radius tokens. Never use raw `border-radius` values.

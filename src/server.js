@@ -117,10 +117,64 @@ function parsePrice(x) {
 }
 
 // ---------- http plumbing ----------
-function send(res, code, body, type = 'application/json') {
-  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store' });
+// Only our own scripts/styles; Google Fonts is the one outside origin (fonts are optional).
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  'font-src https://fonts.gstatic.com',
+  "img-src 'self' data:",
+  "connect-src 'self'",
+  "frame-ancestors 'none'",
+  "base-uri 'none'",
+  "form-action 'none'",
+].join('; ');
+
+function send(res, code, body, type = 'application/json', headers = {}) {
+  res.writeHead(code, {
+    'Content-Type': type,
+    'Cache-Control': 'no-store',
+    'Content-Security-Policy': CSP,
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'no-referrer',
+    ...headers,
+  });
   res.end(type === 'application/json' ? JSON.stringify(body) : body);
 }
+
+// ---------- access token ----------
+// The server binds to loopback only, but other local programs and web pages in a
+// browser can still reach 127.0.0.1. Every request therefore needs a secret: it is
+// handed over once as ?token=... (URL printed by the CLI / opened by Electron) and
+// then kept in an HttpOnly, SameSite=Strict cookie. Stored 0600 in the data dir so
+// bookmarks survive restarts.
+function loadOrCreateToken() {
+  const file = path.join(dataDir(), 'server-token');
+  try {
+    const t = fs.readFileSync(file, 'utf8').trim();
+    if (/^[0-9a-f]{48}$/.test(t)) return t;
+  } catch {}
+  const t = crypto.randomBytes(24).toString('hex');
+  writeAtomic(file, t + '\n');
+  fs.chmodSync(file, 0o600);
+  return t;
+}
+
+const safeEqual = (a, b) => typeof a === 'string' && a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+
+function cookieValue(req, name) {
+  for (const part of (req.headers.cookie || '').split(';')) {
+    const i = part.indexOf('=');
+    if (i > 0 && part.slice(0, i).trim() === name) return part.slice(i + 1).trim();
+  }
+  return null;
+}
+
+const DENIED = `<!doctype html><meta charset="utf-8"><title>Not Enough Tokens</title>
+<body style="font:15px system-ui;padding:40px;max-width:560px">
+<h2>Access token required</h2>
+<p>Open the console from the link printed by <code>node src/cli.js serve</code>, or from the app.</p>
+<p>請使用 <code>node src/cli.js serve</code> 印出的網址開啟，或直接開 App。</p>`;
 
 async function body(req) {
   const chunks = [];
@@ -138,7 +192,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.
 function serveStatic(req, res, pathname) {
   const rel = pathname === '/' ? 'index.html' : pathname.slice(1);
   const file = path.normalize(path.join(WEB, rel));
-  if (!file.startsWith(WEB)) return send(res, 403, { error: 'forbidden' });
+  if (!file.startsWith(WEB + path.sep)) return send(res, 403, { error: 'forbidden' });
   fs.readFile(file, (err, data) => {
     if (err) return send(res, 404, { error: 'not found' });
     send(res, 200, data, MIME[path.extname(file)] || 'application/octet-stream');
@@ -154,10 +208,27 @@ async function handle(req, res, ctx) {
   const host = (req.headers.host || '').toLowerCase();
   if (!ctx.allowedHosts.has(host)) return send(res, 403, { error: 'bad host' });
 
+  const isAskpass = p === '/api/askpass' && method === 'POST';
+  if (!isAskpass) {
+    const given = url.searchParams.get('token');
+    if (given != null) {
+      if (!safeEqual(given, ctx.token)) return send(res, 401, DENIED, 'text/html; charset=utf-8');
+      // Trade the URL token for a cookie and drop it from the address bar.
+      url.searchParams.delete('token');
+      return send(res, 302, '', 'text/plain', {
+        'Set-Cookie': `${ctx.cookie}=${ctx.token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=31536000`,
+        Location: url.pathname + url.search,
+      });
+    }
+    if (!safeEqual(cookieValue(req, ctx.cookie), ctx.token)) {
+      return p.startsWith('/api/') ? send(res, 401, { error: 'unauthorized' }) : send(res, 401, DENIED, 'text/html; charset=utf-8');
+    }
+  }
+
   if (!p.startsWith('/api/')) return serveStatic(req, res, p);
 
-  // askpass callback from the ssh helper (token-authenticated, form-encoded)
-  if (p === '/api/askpass' && method === 'POST') {
+  // askpass callback from the ssh helper (its own bearer token, form-encoded)
+  if (isAskpass) {
     if (req.headers.authorization !== `Bearer ${askToken}`) return send(res, 401, { error: 'unauthorized' });
     const b = await body(req);
     const id = crypto.randomBytes(6).toString('hex');
@@ -303,7 +374,7 @@ async function handle(req, res, ctx) {
 
 export function startServer({ port = 4777, host = '127.0.0.1' } = {}) {
   return new Promise((resolve, reject) => {
-    const ctx = { allowedHosts: new Set() };
+    const ctx = { allowedHosts: new Set(), token: loadOrCreateToken(), cookie: null };
     const server = http.createServer((req, res) => {
       handle(req, res, ctx).catch((e) => {
         if (!res.headersSent) send(res, 400, { error: e.message });
@@ -313,9 +384,10 @@ export function startServer({ port = 4777, host = '127.0.0.1' } = {}) {
     server.listen(port, host, () => {
       const actual = server.address().port;
       for (const h of [host, '127.0.0.1', 'localhost']) ctx.allowedHosts.add(`${h}:${actual}`);
+      ctx.cookie = `net_token_${actual}`; // cookies ignore ports; keep instances apart
       const url = `http://127.0.0.1:${actual}`;
       installAskpass(url);
-      resolve({ server, url, port: actual });
+      resolve({ server, url, port: actual, openUrl: `${url}/?token=${ctx.token}` });
     });
   });
 }
