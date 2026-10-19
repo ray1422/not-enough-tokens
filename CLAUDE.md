@@ -15,7 +15,7 @@ node src/cli.js serve          # open the printed ?token= URL once in the built-
 NET_DATA_DIR=/tmp/x node ...   # scratch data dir for tests
 ```
 
-Packaging (dmg, AppImage, Arch, Nix) is listed in README.md; `packaging/linux/` is shared by the Arch package and `install.sh`. CI runs only for the `release` branch: PRs into it are a build check, a merge publishes GitHub Release `v<version>`, so bump `package.json` first.
+Packaging (dmg, AppImage, Arch, Nix) is listed in README.md; `packaging/linux/` is shared by both Arch PKGBUILDs (`arch/` from the checkout, `aur/` from a tag) and `install.sh`. CI builds everything on PRs into `main` or `release`; a merge into `release` publishes GitHub Release `v<version>`, so bump `package.json` first.
 
 No runtime dependencies, Node ≥ 20, no build step for `web/`.
 

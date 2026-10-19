@@ -13,25 +13,30 @@ node src/cli.js serve          # prints the console URL, including its access to
 npm install && npx install-electron && npm run app    # desktop app from the checkout
 ```
 
+Node ≥ 20, with no runtime dependencies. There is also a CLI: `node src/cli.js sync [id...]` syncs machines and `node src/cli.js prices` refreshes the price table.
+
+The server only listens on 127.0.0.1 and every request needs a per-install token. Open the printed `?token=` link once; a cookie keeps you signed in after that.
+
 ## Packages
+
+Ready-made builds of each version are on the [Releases](https://github.com/ray1422/not-enough-tokens/releases) page: AppImages, the dmg, an Arch package, and an AUR `PKGBUILD`. To build them yourself:
 
 | Target | How | Electron |
 | --- | --- | --- |
 | macOS | `npm run dist:mac` → `dist/*.dmg` (unsigned, Apple silicon) | bundled |
 | Any Linux | `npm ci --ignore-scripts && npm run dist:linux` → `dist/*.AppImage` (x86_64, arm64; needs FUSE 2, or run with `--appimage-extract-and-run`) | bundled |
-| Arch | `cd packaging/arch && makepkg -si` (builds from this checkout) | system `electron` |
+| Arch | `cd packaging/arch && makepkg -si` (builds from this checkout); `packaging/aur/PKGBUILD` builds a tagged release | system `electron` |
 | NixOS / Nix | `nix run github:ray1422/not-enough-tokens`, or `packages.<system>.default` from the flake; `nix run …#cli` for the CLI only | nixpkgs `electron` |
 | Other Linux | `sh packaging/linux/install.sh` (`PREFIX`, `DESTDIR`, `ELECTRON_BIN` honored) | system `electron` |
 
-Releases go through the `release` branch in GitHub Actions; nothing runs for other branches.
+### Releasing
+
+GitHub Actions builds every package for each PR into `main` or `release`, as a check.
 
 1. Bump `version` in `package.json` on `main`.
-2. Open a PR from `main` into `release`. It builds the AppImages, the Arch package and the Nix package as a check.
-3. Merge it. The same builds run again and GitHub Release `v<version>` is published with the AppImages and the Arch package. Re-running the same commit refreshes its files; reusing a version on another commit fails. The dmg is built locally and can be attached to the release by hand.
-
-Node ≥ 20, with no runtime dependencies. There is also a CLI: `node src/cli.js sync [id...]` syncs machines and `node src/cli.js prices` refreshes the price table.
-
-The server only listens on 127.0.0.1 and every request needs a per-install token. Open the printed `?token=` link once; a cookie keeps you signed in after that.
+2. Open a PR from `main` into `release` and merge it once the checks pass.
+3. The merge builds everything again and publishes GitHub Release `v<version>` with the AppImages, the dmg and the Arch package. Re-running the same commit refreshes its files; reusing a version on another commit fails.
+4. The AUR `PKGBUILD` and `SRCINFO` for that tag are attached to the release afterwards, with the checksum filled in and a test build done. To publish on the AUR, copy them into the AUR repo as `PKGBUILD` and `.SRCINFO` and push.
 
 ## Machines
 
