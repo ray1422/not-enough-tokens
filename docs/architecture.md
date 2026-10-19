@@ -1,0 +1,65 @@
+# Architecture
+
+## Layout
+
+- `src/core/`: storage, sync and pricing.
+  - `ledger.js`: one machine's data — buckets, the dedupe map and file cursors.
+  - `sync.js`: the incremental read. `sync-worker.js` runs each sync in a child process (`fork` with `ELECTRON_RUN_AS_NODE=1`), so its memory goes back to the OS afterwards. Machine updates travel back over IPC and are written by the main process.
+  - `machines.js`: `machines.json`, plus each data folder's `identity.json`.
+  - `pricing.js`: the LiteLLM table and manual prices. `projects.js`: cwd → git repo. `settings.js`: timezone and period boundaries.
+- `src/sources/`: where transcripts come from. `local.js` reads this machine; `ssh.js` reads remotes, with `remote_reader.py` running on the remote side in python mode.
+- `src/server.js`: HTTP API, SSE (sync log, askpass prompts) and the askpass endpoint. `src/cli.js`: `serve`, `sync`, `prices`.
+- `electron/main.js`: starts the same server in-process on a random port and opens a sandboxed, context-isolated window. Other origins open in the system browser; permission requests are denied.
+- `packaging/linux/`: launcher, `.desktop`, `install.sh` and PKGBUILD for the distro's electron.
+- `web/`: no-build ES modules. `app.js` (main view), `settings.js`, `core.js` (state, API, formatting, period math), `i18n.js`, `logo-fx.js`, `style.css`.
+
+## Data
+
+All under the data dir (`NET_DATA_DIR`, else `$XDG_DATA_HOME/not-enough-tokens`, else `~/.local/share/not-enough-tokens`). Writes are atomic (temp file, then rename).
+
+| File | Contents |
+| --- | --- |
+| `machines.json` | Machine list: `id` (ours, never changes), host, `altHosts`, ssh options, `fingerprint`, last host/address/sync/error |
+| `machines/<id>/usage_hourly.csv` | Buckets by (hour, project, model) |
+| `machines/<id>/seen.json` | Counts already added per `message.id`, kept 90 days |
+| `machines/<id>/cursors.json` | Per-file inode and byte offset |
+| `machines/<id>/projects.json` | cwd → git common dir, toplevel and origin URL |
+| `machines/<id>/identity.json` | The machine's fingerprint, kept next to its data |
+| `prices.json` | Fetched table, manual overrides, `fetchedAt` |
+| `settings.json` | Locale, timezone, day/week/month start |
+| `server-token` | Access token, mode 0600 |
+
+CSV columns: `hour, span, project, model, msgs`, then for each token kind (`input, output, cacheRead, cacheWrite5m, cacheWrite1h`) the priced tokens, `c_<kind>` (USD) and `u_<kind>` (tokens without a price yet). `span` is 1 for an hourly bucket and 24 for a daily one.
+
+## Counting
+
+- **Dedupe by `message.id` with max-merge.** Streamed lines repeat the same id with growing counts, and forks copy lines into other files. The counts of a line are the larger of the top-level `usage` and the sum of `usage.iterations`. A delta always lands in the hour the message was first seen.
+- **Fast mode** models get an `@fast` suffix; they are priced manually only.
+- **Cost is frozen at ingest** with the price current then. Unpriced tokens stay in `u_*` until priced from the Prices tab; old costs are never recomputed.
+- **Compaction:** buckets older than 35 days are merged into one bucket per local day (respecting the day-start hour), so the file stops growing by the hour. Totals stay identical.
+- **Period math** (timezone, week and month start, to the hour) runs in the browser.
+
+## Sync
+
+1. Connect and read the machine's fingerprint (`/etc/machine-id`, or `IOPlatformUUID` on macOS) and the list of `.jsonl` files with inode and size.
+2. Check the fingerprint. A mismatch stops the sync; so does a second entry for the same box, which is marked `twinOf` so the console can offer to fold its address into the existing machine (as a fallback or as the new main host) and drop the duplicate. On first contact, if a removed machine left data with the same fingerprint, that folder is taken over instead of re-reading everything.
+3. Read only the bytes after each cursor, stopping at the last newline. A changed inode or a shrunk file is read again from the start; the dedupe map makes that harmless.
+4. Save, then map new project paths to git repos.
+
+## SSH
+
+- The system `ssh` with a ControlMaster socket in `/tmp/net-ssh-<uid>/`, so one sync asks for a password at most once.
+- Prompts go through `SSH_ASKPASS` (`askpass.sh`), which calls `/api/askpass` with its own bearer token; the console shows the dialog.
+- `host`, then each of `altHosts`. When another address is left, an unreachable host (ssh exit 255) or one that answers with a different fingerprint is skipped after a 6 s connect timeout. Fallbacks are connected with `HostKeyAlias=<host>`, so they are checked against the host key already trusted for the main host rather than prompting per address; a different key still fails.
+- **Changed host key** (a floating IP now belongs to another box, or a reinstall): ssh refuses without prompting. The parsed details (new key fingerprint, the `known_hosts` file and entry ssh named) are kept as `hostKeyIssue`, and the console explains it. Only for the main host can the user forget the old entry (`ssh-keygen -R`, on the file ssh named); the next connection then asks to trust the new key, and the machine fingerprint must still match before anything is read.
+- **Read modes:** python (python3 ≥ 3.6 parses on the remote and sends compact records) or shell (tail/head/grep send raw lines). Output is gzipped when the remote has gzip. On macOS the `/usr/bin/python3` stub is skipped when the Command Line Tools are missing, since it would pop an install dialog.
+
+## Security
+
+The usage data and the ability to run ssh make the console worth protecting, even on loopback: other local programs, and pages in any browser, can reach 127.0.0.1.
+
+- Binds to loopback. `serve --host` warns when given anything else.
+- Every request needs the token: given once as `?token=`, then traded for an HttpOnly, SameSite=Strict cookie named `net_token_<port>`, and removed from the address bar.
+- The `Host` header must be a loopback name (DNS rebinding).
+- Writes need an `X-NET` header, which a cross-site form can't send.
+- Responses carry a strict CSP, `nosniff` and `no-referrer`.
