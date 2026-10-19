@@ -101,6 +101,27 @@ export function wallOf(hour) {
 const ymd = (w) => new Date(w).toISOString().slice(0, 10);
 const floorDay = (w) => Math.floor(w / D) * D;
 export const nowWall = () => wallOf(Math.floor(Date.now() / H));
+// epoch hour -> "YYYY-MM-DD" in the chosen timezone
+export const fmtDay = (hour) => ymd(wallOf(hour));
+
+// First hour with data per machine. It is where that machine's history starts:
+// Claude Code deletes old transcripts, so nothing before the first sync survives.
+const sinceCache = new WeakMap();
+export function machineSince(mid) {
+  if (!S.usage) return null;
+  let m = sinceCache.get(S.usage);
+  if (!m) {
+    m = new Map();
+    const ix = S.usage.cols.indexOf('hour');
+    for (const [id, rs] of Object.entries(S.usage.machines)) {
+      let min = null;
+      for (const r of rs) if (min == null || r[ix] < min) min = r[ix];
+      m.set(id, min);
+    }
+    sinceCache.set(S.usage, m);
+  }
+  return m.get(mid) ?? null;
+}
 const dow = (i) => t('dow').split(',')[i];
 
 // wall ms -> { key, start } where start is the period's first wall hour.

@@ -1,5 +1,5 @@
 // Settings page (#settings/<tab>): General, Machines and Prices, with tabs on the left.
-import { $, KINDS, S, api, esc, fmtAgo, fmtTok, kindLabel, modal, setTz, store, applyTheme } from './core.js';
+import { $, KINDS, S, api, esc, fmtAgo, fmtDay, fmtTok, kindLabel, machineSince, modal, setTz, store, applyTheme } from './core.js';
 import { LOCALES, setLocale, t } from './i18n.js';
 
 const TABS = ['general', 'machines', 'prices'];
@@ -140,7 +140,7 @@ function renderMachines() {
       .map((m) => {
         const where = m.type === 'local' ? t('m.local') : `ssh ${m.user ? m.user + '@' : ''}${m.host}${m.port ? ':' + m.port : ''}`;
         const via = m.lastHost && m.lastHost !== m.host ? t('m.via', { h: m.lastHost }) : '';
-        const meta = [where, via, m.lastAddress ? t('m.lastAddress', { a: m.lastAddress }) : '', t('m.synced', { ago: fmtAgo(m.lastSyncAt) })].filter(Boolean).join(' · ');
+        const meta = [where, via, m.lastAddress ? t('m.lastAddress', { a: m.lastAddress }) : '', t('m.synced', { ago: fmtAgo(m.lastSyncAt) }), machineSince(m.id) != null ? t('m.since', { d: fmtDay(machineSince(m.id)) }) : ''].filter(Boolean).join(' · ');
         return `<div class="mcard" data-id="${esc(m.id)}">
           <div class="mrow"><b>${esc(m.name)}</b>
             <span class="btns">${m.twinOf ? `<button data-act="merge" class="primary">${esc(t('m.merge'))}</button>` : ''}${
