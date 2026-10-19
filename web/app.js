@@ -1,7 +1,7 @@
 // Web console: top bar, summary cards, chart, breakdown tables, sync + askpass.
 import {
-  $, KINDS, KIND_COLOR, H, RANGES, S, addInto, api, applyTheme, emptyAgg, esc, fmtAgo, fmtInt, fmtTok, fmtUsd,
-  kindLabel, machineName, modal, nowWall, periodLabel, periodOf, setTz, shortProject, store, tok, totalCost,
+  $, KINDS, KIND_COLOR, H, RANGES, S, addInto, api, applyTheme, emptyAgg, esc, fmtAgo, fmtDay, fmtInt, fmtTok, fmtUsd,
+  kindLabel, machineName, machineSince, modal, nowWall, periodLabel, periodOf, setTz, shortProject, store, tok, totalCost,
   totalTok, unpricedTok, wallOf,
 } from './core.js';
 import { setLocale, t, translateDom } from './i18n.js';
@@ -252,16 +252,34 @@ function kindsBlock(a) {
 function renderHeroes(L) {
   const wk = periodOf(nowWall(), 'week'), mo = periodOf(nowWall(), 'month');
   const card = (title, range, a) => `<div class="hero">
-    <div class="label"><span>${esc(title)}</span><span class="range">${esc(range)}</span></div>
+    <div class="label"><span>${esc(title)}</span>${range}</div>
     <div class="big">${fmtUsd(totalCost(a))}</div>
     <div class="sub">${esc(t('hero.sub', { tok: fmtTok(totalTok(a)), msgs: fmtInt(a.msgs) }))}${
       unpricedTok(a) ? ` · <span class="unpriced">${esc(t('hero.unpriced', { tok: fmtTok(unpricedTok(a)) }))}</span>` : ''
     }</div>
     ${kindsBlock(a)}</div>`;
   $('#heroes').innerHTML =
-    card(t('hero.week'), periodLabel(wk, 'week'), L.heroes.week) +
-    card(t('hero.month'), periodLabel(mo, 'month', S.settings.monthStartDay !== 1), L.heroes.month) +
-    card(t('hero.all'), t('hero.machines', { n: S.selected.size }), L.heroes.all);
+    card(t('hero.week'), `<span class="range">${esc(periodLabel(wk, 'week'))}</span>`, L.heroes.week) +
+    card(t('hero.month'), `<span class="range">${esc(periodLabel(mo, 'month', S.settings.monthStartDay !== 1))}</span>`, L.heroes.month) +
+    card(t('hero.all'), sinceLabel(), L.heroes.all);
+}
+
+// "All time" only reaches back to the oldest transcript each machine still had at
+// its first sync. Show where that is, and per machine when the selection differs.
+function sinceLabel() {
+  const ms = S.machines.filter((m) => S.selected.has(m.id)).map((m) => ({ m, since: machineSince(m.id) }));
+  const known = ms.filter((x) => x.since != null);
+  if (!known.length) return `<span class="range">${esc(t('hero.noData'))}</span>`;
+  const first = Math.min(...known.map((x) => x.since));
+  const days = new Set(ms.map((x) => (x.since == null ? null : fmtDay(x.since))));
+  const text = `<span class="range">${esc(t('hero.since', { d: fmtDay(first) }))}</span>`;
+  if (days.size < 2) return text;
+  // The icon goes left of the right-aligned date, so the date stays put either way.
+  const rows = ms
+    .map(({ m, since }) => `<div class="row"><span>${esc(m.name)}</span><span>${esc(since == null ? t('hero.noData') : t('hero.since', { d: fmtDay(since) }))}</span></div>`)
+    .join('');
+  return `<span class="since"><button type="button" class="info" aria-label="${esc(t('hero.sinceTitle'))}" aria-expanded="false"><svg class="ic sm"><use href="#i-info"/></svg></button>${text}
+    <span class="since-pop" role="tooltip"><span class="t">${esc(t('hero.sinceTitle'))}</span>${rows}</span></span>`;
 }
 
 function renderSegs() {
@@ -669,6 +687,15 @@ function wire() {
     if (!$('#settings-view').hidden && /general/.test(location.hash)) showSettings('general');
   };
   $('#console-toggle').onclick = () => $('#console').classList.toggle('open');
+  $('#heroes').addEventListener('click', (e) => {
+    const b = e.target.closest('.since .info');
+    if (!b) return;
+    const open = b.parentElement.classList.toggle('open');
+    b.setAttribute('aria-expanded', open);
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.since')) document.querySelector('.since.open')?.classList.remove('open');
+  });
   // The console is fixed over the page bottom: reserve its current height so nothing ends up under it.
   new ResizeObserver(([e]) => document.body.style.setProperty('--console-h', `${Math.ceil(e.borderBoxSize[0].blockSize)}px`)).observe($('#console'));
   $('#seg-period').onclick = (e) => {
