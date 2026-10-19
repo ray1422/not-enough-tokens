@@ -50,10 +50,10 @@
       "category": "public.app-category.developer-tools",
       "identity": "-",
       "artifactName": "not-enough-tokens-${version}-${arch}.${ext}",
-      "hardenedRuntime": false,
       "extendInfo": {
         "NSLocalNetworkUsageDescription": "Not Enough Tokens connects over SSH to the machines you add, including ones on your local network, to read their Claude Code usage."
-      }
+      },
+      "hardenedRuntime": false
     },
     "linux": {
       "target": [
@@ -69,6 +69,26 @@
           "StartupWMClass": "not-enough-tokens"
         }
       }
+    },
+    "dmg": {
+      "background": "build/dmg-background.png",
+      "iconSize": 100,
+      "window": {
+        "width": 660,
+        "height": 448
+      },
+      "contents": [
+        {
+          "x": 170,
+          "y": 238
+        },
+        {
+          "x": 490,
+          "y": 238,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     }
   }
 }

@@ -4,7 +4,21 @@ Tracks how many tokens Claude Code uses, on this machine and on other machines o
 
 Linux and macOS only.
 
-## Run
+## Install
+
+**macOS** (Apple silicon), one line in Terminal:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ray1422/not-enough-tokens/main/packaging/mac/install.sh | sh
+```
+
+It downloads the latest dmg from [Releases](https://github.com/ray1422/not-enough-tokens/releases) and copies the app into `/Applications`. [Read the script](packaging/mac/install.sh) first if you like; it is short.
+
+The app is ad-hoc signed, not notarized by Apple, so a dmg downloaded in a browser is blocked the first time you open the app ("Apple could not verify…"). Either use the line above (files fetched with `curl` are not quarantined), or open the dmg as usual and then allow the app once in System Settings → Privacy & Security → Open Anyway. The first sync of a machine on your local network asks for Local Network access; allow it, or ssh gets "No route to host".
+
+**Linux:** the AppImage from Releases runs on most distributions (`chmod +x` it first). Arch users can use the AUR `PKGBUILD` attached to each release; Nix users `nix run github:ray1422/not-enough-tokens`. See [Packages](#packages) for building them yourself.
+
+## Run from source
 
 The console is a local web page. Use it from a browser, or as a desktop app.
 
