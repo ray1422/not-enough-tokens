@@ -1,5 +1,5 @@
 // Settings page (#settings/<tab>): General, Machines and Prices, with tabs on the left.
-import { $, KINDS, S, api, esc, fmtAgo, fmtTok, kindLabel, setTz, store, applyTheme } from './core.js';
+import { $, KINDS, S, api, esc, fmtAgo, fmtTok, kindLabel, modal, setTz, store, applyTheme } from './core.js';
 import { LOCALES, setLocale, t } from './i18n.js';
 
 const TABS = ['general', 'machines', 'prices'];
@@ -192,7 +192,7 @@ function renderMachines() {
           await ctx.loadState();
           renderMachines();
         }
-        if (act === 'del' && confirm(t('m.confirmRemove'))) {
+        if (act === 'del' && (await confirmDialog(t('m.confirmRemove'), t('m.remove')))) {
           await api('/api/machines/' + id, { method: 'DELETE' });
           await ctx.loadState();
           await ctx.loadUsage();
@@ -267,5 +267,25 @@ async function renderPrices() {
         $('#p-err').textContent = err.message;
       }
     });
+  });
+}
+
+// window.confirm() is unavailable in embedded browsers (it returns false at once), so use our own dialog.
+function confirmDialog(message, okLabel) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (v) => {
+      if (done) return;
+      done = true;
+      close();
+      resolve(v);
+    };
+    const { el, close } = modal(
+      `<p>${esc(message)}</p>
+      <div class="foot"><button data-v="0">${esc(t('m.cancel'))}</button><button class="primary danger-fill" data-v="1">${esc(okLabel)}</button></div>`,
+      { onClose: () => finish(false) },
+    );
+    el.querySelectorAll('[data-v]').forEach((b) => (b.onclick = () => finish(b.dataset.v === '1')));
+    el.querySelector('[data-v="0"]').focus();
   });
 }

@@ -122,6 +122,8 @@ button.primary { background: var(--accent-strong); border-color: var(--accent-st
 button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 button.primary:disabled { opacity: .7; cursor: progress; }
 button.danger { color: var(--danger); }
+button.primary.danger-fill { background: var(--danger); border-color: var(--danger); }
+button.primary.danger-fill:hover { filter: brightness(.92); }
 button.link { background: none; border: 0; padding: 0; color: var(--link); }
 button.link:hover { text-decoration: underline; background: none; }
 input, select, textarea {
