@@ -322,9 +322,11 @@ function renderChart(list) {
       let h = y0 - y(acc) - (j > 0 ? 2 : 0); // 2px surface gap between stacked segments
       if (h < 0.5) h = 0.5;
       const yy = y0 - (j > 0 ? 2 : 0) - h;
-      if (j === segs.length - 1 && h > 4) {
-        const r = Math.min(4, bw / 2);
-        svg += `<path fill="${KIND_COLOR[s.k]}" d="M${x},${yy + h}V${yy + r}Q${x},${yy} ${x + r},${yy}H${x + bw - r}Q${x + bw},${yy} ${x + bw},${yy + r}V${yy + h}Z"/>`;
+      const r = Math.min(6, bw / 2);
+      if (j === segs.length - 1 && h > r) {
+        // Cubic with both handles at the corner: curvature is 0 where it meets the
+        // straight sides, so the rounded top is G2 like the CSS squircles.
+        svg += `<path fill="${KIND_COLOR[s.k]}" d="M${x},${yy + h}V${yy + r}C${x},${yy} ${x},${yy} ${x + r},${yy}H${x + bw - r}C${x + bw},${yy} ${x + bw},${yy} ${x + bw},${yy + r}V${yy + h}Z"/>`;
       } else svg += `<rect fill="${KIND_COLOR[s.k]}" x="${x}" y="${yy}" width="${bw}" height="${h}"/>`;
     });
     svg += `<rect class="hit" data-i="${i}" x="${padL + band * i}" y="${padT}" width="${band}" height="${ih}"/>`;
