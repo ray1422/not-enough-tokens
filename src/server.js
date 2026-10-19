@@ -241,6 +241,10 @@ async function handle(req, res, ctx) {
       }
       s.timezone = b.timezone;
     }
+    if (b.locale != null) {
+      if (!['auto', 'zh-TW', 'en'].includes(b.locale)) return send(res, 400, { error: 'unknown locale' });
+      s.locale = b.locale;
+    }
     const int = (k, lo, hi) => {
       if (b[k] == null) return;
       const v = Number(b[k]);

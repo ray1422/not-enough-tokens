@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,18 +7,30 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-sync" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8m0-4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16m0 4v-4h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></g></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-auto" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </svg>
+
   <header class="topbar">
-    <div class="brand">not-enough-tokens<span class="cursor">_</span></div>
-    <div id="machine-chips" class="chips" aria-label="machines"></div>
+    <a class="brand" href="#">not-enough-tokens<span class="cursor">_</span></a>
+    <div class="chips-wrap" id="chips-wrap">
+      <div id="machine-chips" class="chips" aria-label="machines"></div>
+      <button id="chips-more" class="chip more" hidden aria-haspopup="true" aria-expanded="false"><span></span><svg class="ic sm"><use href="#i-chevron"/></svg></button>
+      <div id="chips-pop" class="popover" hidden></div>
+    </div>
     <div class="actions">
-      <button id="btn-sync" class="primary">Sync</button>
-      <button id="btn-machines" title="Machines">Machines</button>
-      <button id="btn-prices" title="Prices">Prices</button>
-      <button id="btn-settings" title="Settings">Settings</button>
+      <button id="btn-sync" class="primary with-icon"><svg class="ic"><use href="#i-sync"/></svg><span></span></button>
+      <button id="btn-theme" class="icon-btn" data-i18n-title="gen.theme"><svg class="ic"><use href="#i-auto"/></svg></button>
+      <a id="btn-settings" class="icon-btn" href="#settings/general" data-i18n-title="nav.settings"><svg class="ic"><use href="#i-gear"/></svg></a>
     </div>
   </header>
 
-  <main>
+  <main id="main-view">
     <div id="unpriced-banner" class="banner" hidden></div>
 
     <section class="heroes" id="heroes"></section>
@@ -26,37 +38,39 @@
     <section class="panel">
       <div class="panel-head">
         <div class="seg" id="seg-period">
-          <button data-v="day">日</button><button data-v="week" class="on">週</button><button data-v="month">月</button>
+          <button data-v="day" data-i18n="period.day"></button><button data-v="week" data-i18n="period.week"></button><button data-v="month" data-i18n="period.month"></button>
         </div>
         <div class="seg" id="seg-metric">
-          <button data-v="cost" class="on">牌價 USD</button><button data-v="tokens">Tokens</button>
+          <button data-v="cost" data-i18n="metric.cost"></button><button data-v="tokens" data-i18n="metric.tokens"></button>
         </div>
         <div class="seg" id="seg-range"></div>
         <div class="legend" id="legend"></div>
       </div>
       <div id="chart" class="chart"></div>
-      <div class="hint" id="chart-hint">點選長條可只看該期間的 model / project 明細</div>
+      <div class="hint" data-i18n="chart.hint"></div>
     </section>
 
     <section class="panel">
-      <div class="panel-head"><h2>By model</h2><span class="scope" id="scope-model"></span></div>
+      <div class="panel-head"><h2 data-i18n="sec.byModel"></h2><span class="scope" id="scope-model"></span></div>
       <div id="tbl-model" class="tbl-wrap"></div>
     </section>
 
     <section class="panel">
-      <div class="panel-head"><h2>By project</h2>
+      <div class="panel-head"><h2 data-i18n="sec.byProject"></h2>
         <div class="seg" id="seg-proj">
-          <button data-v="repo" title="依 git remote 合併：worktree、子目錄、多份 clone 都算同一個">Repo</button><button data-v="dir" title="依 repo 根目錄：合併 worktree 與子目錄，不同 clone 分開">目錄</button><button data-v="path" title="原始工作目錄">完整路徑</button>
+          <button data-v="repo" data-i18n="proj.repo" data-i18n-title="proj.repoTitle"></button><button data-v="dir" data-i18n="proj.dir" data-i18n-title="proj.dirTitle"></button><button data-v="path" data-i18n="proj.path" data-i18n-title="proj.pathTitle"></button>
         </div>
         <span class="scope" id="scope-project"></span></div>
       <div id="tbl-project" class="tbl-wrap"></div>
     </section>
 
     <section class="panel">
-      <div class="panel-head"><h2>Periods</h2></div>
+      <div class="panel-head"><h2 data-i18n="sec.periods"></h2></div>
       <div id="tbl-period" class="tbl-wrap"></div>
     </section>
   </main>
+
+  <section id="settings-view" hidden></section>
 
   <section class="console" id="console">
     <div class="console-head" id="console-toggle"><span>console</span><span id="console-status"></span></div>

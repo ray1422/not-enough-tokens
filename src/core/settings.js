@@ -7,6 +7,7 @@ const file = () => path.join(dataDir(), 'settings.json');
 
 export function defaultSettings() {
   return {
+    locale: 'auto', // 'auto' | 'zh-TW' | 'en'
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     dayStartHour: 0,
     weekStartDow: 1, // Monday
