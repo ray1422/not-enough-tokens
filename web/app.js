@@ -707,6 +707,8 @@ function wire() {
   });
 }
 
+// In the macOS app the window has no title bar: the top bar doubles as one.
+if (/Electron\//.test(navigator.userAgent) && /Mac/.test(navigator.platform)) document.documentElement.classList.add('app-mac');
 applyTheme();
 initLogoFx($('.brand'));
 initSettings({ loadState, loadUsage, renderAll, startSync, log });

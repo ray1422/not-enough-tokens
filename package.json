@@ -10,36 +10,42 @@
   "scripts": {
     "serve": "node src/cli.js serve",
     "sync": "node src/cli.js sync",
-    "test": "node --test test/",
-    "electron": "electron .",
-    "dist": "electron-builder --publish never"
+    "app": "electron .",
+    "dist:mac": "electron-builder --mac --publish never",
+    "install:linux": "sh packaging/linux/install.sh"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
-    "electron": "^38.2.0",
-    "electron-builder": "^26.0.12"
+    "electron": "44.5.1",
+    "electron-builder": "26.15.3"
   },
   "build": {
     "appId": "dev.ray1422.not-enough-tokens",
     "productName": "Not Enough Tokens",
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
     "files": [
       "electron/**",
       "src/**",
       "web/**",
       "package.json"
     ],
-    "asarUnpack": [
-      "src/askpass.sh"
-    ],
     "mac": {
-      "target": "dmg",
-      "category": "public.app-category.developer-tools"
-    },
-    "linux": {
-      "target": "AppImage",
-      "category": "Development"
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.developer-tools",
+      "identity": null
     }
   }
 }

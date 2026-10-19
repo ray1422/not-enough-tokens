@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Not Enough Tokens
+Comment=Claude Code usage across machines
+Exec=not-enough-tokens %U
+Icon=not-enough-tokens
+Terminal=false
+Categories=Development;Utility;
+StartupWMClass=not-enough-tokens

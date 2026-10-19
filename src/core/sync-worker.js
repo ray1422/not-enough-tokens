@@ -10,8 +10,11 @@ const CHILD_FLAG = '--net-sync-child';
 
 export function syncInWorker(id, askpass, log = () => {}) {
   return new Promise((resolve, reject) => {
-    // In Electron, fork() runs the child as plain Node (ELECTRON_RUN_AS_NODE).
-    const child = fork(fileURLToPath(import.meta.url), [CHILD_FLAG], { stdio: ['ignore', 'inherit', 'inherit', 'ipc'] });
+    // Under Electron, execPath is the Electron binary: run the child as plain Node.
+    const child = fork(fileURLToPath(import.meta.url), [CHILD_FLAG], {
+      stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+    });
     let settled = false;
     const settle = (fn, v) => {
       if (!settled) {

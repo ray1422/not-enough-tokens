@@ -222,6 +222,11 @@ code { font: 12px var(--mono); background: var(--surface-2); padding: 1px 5px; b
 .pop-item .ago { color: var(--muted); font-size: 12px; }
 .pop-foot { display: block; padding: 8px 10px; border-top: 1px solid var(--border); font-size: 13px; text-decoration: none; }
 
+/* macOS app: hidden title bar, so the top bar is the drag region and leaves room
+   for the traffic lights. Anything clickable opts out of dragging. */
+.app-mac .topbar { padding-left: 88px; min-height: 52px; -webkit-app-region: drag; }
+.app-mac .topbar :is(a, button, label, input, .popover) { -webkit-app-region: no-drag; }
+
 /* ---------- main ---------- */
 main { max-width: 1280px; margin: 0 auto; padding: 20px 24px; display: grid; gap: 16px; }
 .banner {
