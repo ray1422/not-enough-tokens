@@ -1,0 +1,21 @@
+# Arch Linux package on the system electron, built from this checkout (the repo is
+# private, so nothing is downloaded):
+#   cd packaging/arch && makepkg -si
+pkgname=not-enough-tokens
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Claude Code usage across machines, with a local web console'
+arch=('any')
+url='https://github.com/ray1422/not-enough-tokens'
+license=('custom')
+depends=('electron' 'openssh' 'curl')
+optdepends=('git: group usage by repository')
+
+pkgver() {
+  sed -n 's/^  "version": "\(.*\)",$/\1/p' "$startdir/../../package.json"
+}
+
+package() {
+  local repo="$startdir/../.."
+  DESTDIR="$pkgdir" PREFIX=/usr ELECTRON_BIN=/usr/bin/electron sh "$repo/packaging/linux/install.sh"
+}

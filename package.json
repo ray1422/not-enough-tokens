@@ -12,7 +12,8 @@
     "sync": "node src/cli.js sync",
     "app": "electron .",
     "dist:mac": "electron-builder --mac --publish never",
-    "install:linux": "sh packaging/linux/install.sh"
+    "install:linux": "sh packaging/linux/install.sh",
+    "dist:linux": "electron-builder --linux AppImage --x64 --arm64 --publish never"
   },
   "engines": {
     "node": ">=20"
@@ -46,6 +47,21 @@
       "icon": "build/icon.png",
       "category": "public.app-category.developer-tools",
       "identity": null
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "icon": "build/icon.png",
+      "category": "Development",
+      "executableName": "not-enough-tokens",
+      "artifactName": "not-enough-tokens-${version}-${arch}.${ext}",
+      "synopsis": "Claude Code usage across machines",
+      "desktop": {
+        "entry": {
+          "StartupWMClass": "not-enough-tokens"
+        }
+      }
     }
   }
 }

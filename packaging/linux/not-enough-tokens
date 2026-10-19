@@ -1,7 +1,9 @@
 #!/bin/sh
 # Launches the app with the system Electron (no Electron is bundled on Linux).
 APP_DIR="${NET_APP_DIR:-@APP_DIR@}"
-ELECTRON="${ELECTRON:-$(command -v electron 2>/dev/null)}"
+# install.sh bakes in ELECTRON_BIN here when the package knows its electron.
+ELECTRON="${ELECTRON:-@ELECTRON@}"
+[ -n "$ELECTRON" ] || ELECTRON="$(command -v electron 2>/dev/null)"
 if [ -z "$ELECTRON" ]; then
   echo "not-enough-tokens: 'electron' not found. Install your distribution's electron package or set ELECTRON=/path/to/electron." >&2
   exit 1
