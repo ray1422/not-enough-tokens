@@ -10,10 +10,24 @@ The console is a local web page. Use it from a browser, or as a desktop app.
 
 ```bash
 node src/cli.js serve          # prints the console URL, including its access token
-npm install && npx install-electron && npm run app    # desktop app
-npm run dist:mac               # dist/*.dmg (unsigned, Apple silicon)
-sh packaging/linux/install.sh  # Linux desktop entry on the system electron (PREFIX/DESTDIR honored)
+npm install && npx install-electron && npm run app    # desktop app from the checkout
 ```
+
+## Packages
+
+| Target | How | Electron |
+| --- | --- | --- |
+| macOS | `npm run dist:mac` → `dist/*.dmg` (unsigned, Apple silicon) | bundled |
+| Any Linux | `npm ci --ignore-scripts && npm run dist:linux` → `dist/*.AppImage` (x86_64, arm64; needs FUSE 2, or run with `--appimage-extract-and-run`) | bundled |
+| Arch | `cd packaging/arch && makepkg -si` (builds from this checkout) | system `electron` |
+| NixOS / Nix | `nix run github:ray1422/not-enough-tokens`, or `packages.<system>.default` from the flake; `nix run …#cli` for the CLI only | nixpkgs `electron` |
+| Other Linux | `sh packaging/linux/install.sh` (`PREFIX`, `DESTDIR`, `ELECTRON_BIN` honored) | system `electron` |
+
+Releases go through the `release` branch in GitHub Actions; nothing runs for other branches.
+
+1. Bump `version` in `package.json` on `main`.
+2. Open a PR from `main` into `release`. It builds the AppImages, the Arch package and the Nix package as a check.
+3. Merge it. The same builds run again and GitHub Release `v<version>` is published with the AppImages and the Arch package. Re-running the same commit refreshes its files; reusing a version on another commit fails. The dmg is built locally and can be attached to the release by hand.
 
 Node ≥ 20, with no runtime dependencies. There is also a CLI: `node src/cli.js sync [id...]` syncs machines and `node src/cli.js prices` refreshes the price table.
 

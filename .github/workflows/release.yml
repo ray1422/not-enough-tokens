@@ -1,0 +1,94 @@
+# Linux packages, only around the release branch to save Actions minutes on this
+# private repo:
+#   PR into release  -> build everything as a check, keep nothing
+#   push to release  -> build, then publish GitHub Release v<package.json version>
+#                       with the AppImages and the Arch package
+# The macOS dmg is built locally (`npm run dist:mac`) and can be added to the release by hand.
+name: release
+
+on:
+  pull_request:
+    branches: [release]
+  push:
+    branches: [release]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  appimage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run dist:linux
+      - if: github.ref == 'refs/heads/release' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: appimage
+          path: dist/*.AppImage
+          if-no-files-found: error
+
+  arch:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - run: pacman -Syu --noconfirm --needed base-devel git
+      - uses: actions/checkout@v4
+      # makepkg refuses to run as root.
+      - run: |
+          useradd -m builder
+          chown -R builder .
+          su builder -c 'cd packaging/arch && makepkg --nodeps --noconfirm'
+      - if: github.ref == 'refs/heads/release' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: arch
+          path: packaging/arch/*.pkg.tar.zst
+          if-no-files-found: error
+
+  nix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - run: nix flake check
+      - run: nix build .#default -L
+
+  publish:
+    if: github.ref == 'refs/heads/release' && github.event_name != 'pull_request'
+    needs: [appimage, arch, nix]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Publish v<version>
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v$(node -p 'require("./package.json").version')"
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then
+            # Same version again: refresh its files only if the tag is this commit
+            # (the peeled ^{} line, listed last, is the commit of an annotated tag).
+            if [ "$(git ls-remote --tags origin "refs/tags/$tag" "refs/tags/$tag^{}" | tail -1 | cut -f1)" != "$GITHUB_SHA" ]; then
+              echo "::error::$tag already exists on another commit. Bump the version in package.json."
+              exit 1
+            fi
+            gh release upload "$tag" out/* --clobber
+          else
+            gh release create "$tag" out/* --target "$GITHUB_SHA" --title "$tag" --generate-notes
+          fi
