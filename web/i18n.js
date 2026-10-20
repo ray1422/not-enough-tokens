@@ -102,6 +102,9 @@ const STRINGS = {
     'gen.periodsNote': 'For example, set the week to when your Claude usage limit resets so "This week" lines up with it. The last 35 days are kept hourly, so changes apply without re-syncing; older data is stored per day.',
     'gen.data': 'Data',
     'gen.dataDir': 'Data folder',
+    'gen.about': 'About',
+    'gen.aboutDesc': 'Claude Code usage across your machines.',
+    'gen.license': 'BSD 3-Clause License',
 
     'm.addTitle': 'Add SSH machine',
     'm.add': 'Add',
@@ -269,6 +272,9 @@ const STRINGS = {
     'gen.periodsNote': '例如把一週設成 Claude 用量額度重置的星期與小時，「本週」就會對齊額度週期。最近 35 天以小時保存，改設定不需重新同步；更早的資料以日為單位保存。',
     'gen.data': '資料',
     'gen.dataDir': '資料目錄',
+    'gen.about': '關於',
+    'gen.aboutDesc': '彙整你各台機器的 Claude Code 用量。',
+    'gen.license': 'BSD 3-Clause 授權',
 
     'm.addTitle': '新增 SSH 機器',
     'm.add': '新增',

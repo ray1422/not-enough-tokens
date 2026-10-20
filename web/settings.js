@@ -3,6 +3,7 @@ import { $, KINDS, S, api, esc, fmtAgo, fmtDay, fmtTok, kindLabel, machineSince,
 import { LOCALES, setLocale, t } from './i18n.js';
 
 const TABS = ['general', 'machines', 'prices'];
+const REPO = 'https://github.com/ray1422/not-enough-tokens';
 let ctx = null; // callbacks from app.js: { loadState, loadUsage, renderAll, startSync, log }
 let current = 'general';
 
@@ -78,6 +79,17 @@ function renderGeneral() {
     <section class="set-section">
       <h3>${esc(t('gen.data'))}</h3>
       <p class="note">${esc(t('gen.dataDir'))}: <code>${esc(S.dataDir)}</code></p>
+    </section>
+    <section class="set-section about">
+      <h3>${esc(t('gen.about'))}</h3>
+      <div class="about-row">
+        <img src="logo.svg" alt="" width="56" height="56">
+        <div>
+          <div class="about-name">Not Enough Tokens <span class="num">${esc(S.version)}</span></div>
+          <p class="note">${esc(t('gen.aboutDesc'))}</p>
+          <p class="note">${esc(t('gen.license'))} · <a href="${REPO}" target="_blank" rel="noopener">GitHub</a></p>
+        </div>
+      </div>
     </section>
     <div class="err-text" id="g-err"></div>`;
 

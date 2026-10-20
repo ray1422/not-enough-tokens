@@ -1,7 +1,7 @@
 // Electron shell: runs the same HTTP server in-process on a random loopback port
 // and shows the console in a locked-down window. Works with a bundled Electron
 // (macOS .app) or the system one on Linux (`electron /usr/lib/not-enough-tokens`).
-import { BrowserWindow, app, nativeTheme, session, shell } from 'electron';
+import { BrowserWindow, Menu, app, nativeTheme, session, shell } from 'electron';
 import { startServer } from '../src/server.js';
 
 if (!app.requestSingleInstanceLock()) app.quit();
@@ -44,6 +44,12 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  // Off macOS the default menu bar only holds Electron's own items; About lives in
+  // Settings. macOS dispatches ⌘C/⌘V/⌘W/⌘M through the menu (hidden items lose
+  // them), so it keeps the app, Edit and Window menus; Close moves from the dropped
+  // File menu into Window.
+  const windowMenu = { role: 'windowMenu', submenu: [{ role: 'minimize' }, { role: 'zoom' }, { role: 'close' }, { type: 'separator' }, { role: 'front' }] };
+  Menu.setApplicationMenu(process.platform === 'darwin' ? Menu.buildFromTemplate([{ role: 'appMenu' }, { role: 'editMenu' }, windowMenu]) : null);
   // The page needs no camera, notifications, etc.
   session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));
   server = await startServer({ port: 0, host: '127.0.0.1' });

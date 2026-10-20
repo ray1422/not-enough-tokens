@@ -45,6 +45,7 @@ export const S = {
   expanded: new Set(),
   hidden: new Set(store.get('hidden', [])), // token kinds hidden from the chart
   dataDir: '',
+  version: '',
 };
 
 export async function api(path, opts = {}) {

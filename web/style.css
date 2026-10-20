@@ -320,6 +320,11 @@ tr.child td:first-child { padding-left: 32px; font-family: var(--mono); font-siz
 .set-pane { min-width: 0; display: grid; gap: 16px; }
 .set-section { min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px 20px; box-shadow: var(--shadow); }
 .set-section h3 { margin: 0 0 12px; font: 600 15px var(--sans); }
+.about-row { display: flex; gap: 14px; align-items: center; }
+.about-row img { flex: none; }
+.about-row .note { margin: 2px 0 0; }
+.about-name { font: 600 15px var(--sans); }
+.about-name .num { margin-left: 6px; color: var(--text-2); font: 400 13px var(--mono); }
 .formgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .formgrid .wide { grid-column: span 2; }
 .formgrid .full { grid-column: 1 / -1; }

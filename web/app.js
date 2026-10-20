@@ -576,6 +576,7 @@ async function loadState() {
   const st = await api('/api/state');
   S.machines = st.machines;
   S.dataDir = st.dataDir;
+  S.version = st.version;
   if (!S.settings || st.settings.timezone !== S.settings.timezone) setTz(st.settings.timezone);
   if (!S.settings || st.settings.locale !== S.settings.locale) {
     setLocale(st.settings.locale);

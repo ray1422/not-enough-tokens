@@ -16,6 +16,7 @@ import { loadSettings, saveSettings } from './core/settings.js';
 
 const WEB = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'web');
 const PRICE_MAX_AGE = 6 * 3600_000;
+const VERSION = JSON.parse(fs.readFileSync(path.join(WEB, '..', 'package.json'), 'utf8')).version;
 
 // ---------- events (SSE) ----------
 const clients = new Set();
@@ -301,6 +302,7 @@ async function handle(req, res, ctx) {
       prices: { fetchedAt: pr.fetchedAt, lastError: pr.lastError || null },
       syncing: job ? [...job.running] : [],
       dataDir: dataDir(),
+      version: VERSION,
       hostname: os.hostname(),
     });
   }
