@@ -1,5 +1,5 @@
 // Settings page (#settings/<tab>): General, Machines and Prices, with tabs on the left.
-import { $, KINDS, S, api, esc, fmtAgo, fmtDay, fmtTok, kindLabel, machineSince, modal, setTz, store, applyTheme } from './core.js';
+import { $, KINDS, S, api, esc, fmtAgo, fmtDay, fmtTok, infoTip, kindLabel, machineSince, modal, setTz, store, applyTheme } from './core.js';
 import { LOCALES, setLocale, t } from './i18n.js';
 import { applyScrollbar, scrollbarPrefs } from './scrollbar.js';
 
@@ -339,7 +339,13 @@ function openDiscover(onAdd) {
           const via = [d.mdns && t('d.mdns'), d.tailscale && t('d.tailscale')].filter(Boolean).join(' · ');
           const where = [d.mdns && [d.mdns.host, ...d.mdns.addrs].join(' '), d.tailscale && `${d.tailscale.host}${d.tailscale.online ? '' : ` (${t('d.offline')})`}`].filter(Boolean);
           const device = d.mdns?.kind === 'device' || /^(iOS|android|tvOS)$/i.test(d.tailscale?.os || '');
-          const hint = d.mdns?.ssh != null ? t('d.ssh', { p: d.mdns.ssh }) : d.mdns?.kind === 'mac' ? t('d.macHint') : device ? t('d.notComputer') : d.mdns ? t('d.noSsh') : '';
+          // [short status, explanation for the (i)]; mDNS only tells what a host announces.
+          const [hint, why] =
+            d.mdns?.ssh != null ? [t('d.ssh', { p: d.mdns.ssh }), '']
+            : d.mdns?.kind === 'mac' ? [t('d.noSshShort'), t('d.macHint')]
+            : device ? [t('d.notComputerShort'), d.mdns?.kind === 'device' ? t('d.notComputer') : t('d.notComputerTs', { os: d.tailscale.os })]
+            : d.mdns ? [t('d.noSshShort'), t('d.noSsh')]
+            : ['', ''];
           const known = d.known && S.machines.find((m) => m.id === d.known);
           const acts = known
             ? d.newHosts?.length ? `<button data-alt="${esc(d.key)}" title="${esc(d.newHosts.join(', '))}">${esc(t('d.addAlt'))}</button>` : ''
@@ -347,7 +353,7 @@ function openDiscover(onAdd) {
           const status = known ? t('d.known', { name: known.name }) : hint;
           return `<div class="disc-row" data-key="${esc(d.key)}">
             <div class="top"><b>${esc(d.name)}</b><span class="via">${esc(via)}</span>
-              ${status ? `<span class="status ${!known && d.mdns?.ssh != null ? 'ok' : ''}">${esc(status)}</span>` : ''}</div>
+              ${status ? `<span class="status ${!known && d.mdns?.ssh != null ? 'ok' : ''}">${esc(status)}${!known && why ? ` ${infoTip(why)}` : ''}</span>` : ''}</div>
             <div class="meta">${where.map(esc).join('<br>')}</div>
             <div class="acts">${acts}</div>
           </div>`;

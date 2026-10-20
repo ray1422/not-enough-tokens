@@ -21,6 +21,8 @@ All user-visible text goes through `t()` in `web/i18n.js`, with `zh-TW` and `en`
 
 Don't use `window.confirm`/`alert`/`prompt`: embedded browsers suppress them. Use the in-app modal.
 
+Keep status text short; put the why behind an (i) with `infoTip(text)` (`web/core.js`). Its popup is one fixed element above everything, modals included, so a scrolling list can't clip it; it shows on hover or focus and toggles on click.
+
 ## Logo
 
 - Source: `design/logo/` (gitignored). `make-logo.py` (fontTools, Poppins outlines) writes `build/icon.svg`, `web/icon.svg` and `web/logo*.svg`; `render-svg.mjs` renders the PNG with Electron's Chromium.

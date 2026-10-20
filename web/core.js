@@ -201,6 +201,41 @@ export function modal(html, { onClose, cls = '' } = {}) {
   return { el: bg.firstElementChild, close };
 }
 
+// (i) with an explanation: infoTip(text) is the button; the popup is one fixed
+// element on top of everything (modals included), so a scrolling list can't clip
+// it. Shows on hover or focus, and toggles on click for touch.
+export const infoTip = (text, label = '') =>
+  `<button type="button" class="info" data-tip="${esc(text)}" aria-label="${esc(label || text)}"><svg class="ic sm"><use href="#i-info"/></svg></button>`;
+let tipEl = null, tipFor = null;
+function showTip(b) {
+  tipEl ??= Object.assign(document.createElement('div'), { className: 'tip-pop', role: 'tooltip' });
+  if (!tipEl.isConnected) document.body.append(tipEl);
+  tipFor = b;
+  tipEl.textContent = b.dataset.tip;
+  tipEl.hidden = false;
+  const r = b.getBoundingClientRect(), w = tipEl.offsetWidth, h = tipEl.offsetHeight;
+  const below = r.bottom + 6 + h <= innerHeight - 8;
+  tipEl.style.left = `${Math.max(8, Math.min(r.right - w, innerWidth - w - 8))}px`;
+  tipEl.style.top = `${below ? r.bottom + 6 : r.top - 6 - h}px`;
+}
+function hideTip() {
+  if (tipEl) tipEl.hidden = true;
+  tipFor = null;
+}
+document.addEventListener('pointerover', (e) => {
+  const b = e.target.closest?.('.info[data-tip]');
+  if (b) showTip(b);
+  else if (tipFor && e.pointerType === 'mouse') hideTip();
+});
+document.addEventListener('focusin', (e) => e.target.matches?.('.info[data-tip]') && showTip(e.target));
+document.addEventListener('focusout', (e) => e.target === tipFor && hideTip());
+document.addEventListener('click', (e) => {
+  const b = e.target.closest?.('.info[data-tip]');
+  if (b && tipFor !== b) showTip(b);
+  else if (!b || tipFor === b) hideTip();
+});
+addEventListener('scroll', hideTip, true);
+
 export function applyTheme() {
   const th = store.get('theme', 'system');
   if (th === 'system') delete document.documentElement.dataset.theme;
