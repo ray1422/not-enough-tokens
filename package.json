@@ -1,6 +1,6 @@
 {
   "name": "not-enough-tokens",
-  "version": "0.1.2",
+  "version": "0.1.5",
   "description": "Incremental Claude Code usage tracker across machines, with a web console",
   "license": "BSD-3-Clause",
   "type": "module",
