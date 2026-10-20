@@ -228,7 +228,7 @@ code { font: 12px var(--mono); background: var(--surface-2); padding: 1px 5px; b
 
 /* macOS app: hidden title bar, so the top bar is the drag region and leaves room
    for the traffic lights. Anything clickable opts out of dragging. */
-.app-mac .topbar { padding-left: 88px; min-height: 52px; -webkit-app-region: drag; }
+.app-mac .topbar { padding-left: calc(88px / var(--zoom, 1)); /* traffic lights don't scale */ min-height: 52px; -webkit-app-region: drag; }
 .app-mac .topbar :is(a, button, label, input, .popover) { -webkit-app-region: no-drag; }
 /* Linux: Electron's window buttons sit in the overlay; titlebar-area-* is the part
    left for us, on whichever side the desktop puts the buttons. */

@@ -14,6 +14,7 @@ export function defaultSettings() {
     weekStartHour: 0,
     monthStartDay: 1,
     monthStartHour: 0,
+    zoom: 1, // desktop app's display scale (Electron zoom factor)
   };
 }
 

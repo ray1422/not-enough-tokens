@@ -1,5 +1,5 @@
 // Settings page (#settings/<tab>): General, Machines and Prices, with tabs on the left.
-import { $, KINDS, S, api, esc, fmtAgo, fmtDay, fmtTok, infoTip, kindLabel, machineSince, modal, setTz, store, applyTheme } from './core.js';
+import { $, KINDS, S, api, esc, fmtAgo, fmtDay, fmtTok, infoTip, kindLabel, machineSince, modal, setTz, store, applyTheme, applyZoom } from './core.js';
 import { LOCALES, setLocale, t } from './i18n.js';
 import { applyScrollbar, scrollbarPrefs } from './scrollbar.js';
 
@@ -123,9 +123,17 @@ function renderGeneral() {
 }
 
 // ---------- UI tuning ----------
+const ZOOMS = [0.8, 0.9, 1, 1.1, 1.25, 1.5];
 function renderUi() {
   const p = scrollbarPrefs(store);
-  $('#set-pane').innerHTML = `
+  const z = S.settings.zoom || 1;
+  // Display scale only in the desktop app; a browser has its own (Ctrl/⌘ +/-).
+  $('#set-pane').innerHTML = `${window.netApp?.setZoom ? `
+    <section class="set-section">
+      <div class="formgrid">
+        <label class="f wide">${esc(t('ui.zoom'))}<select name="zoom">${ZOOMS.map((v) => `<option value="${v}" ${v === z ? 'selected' : ''}>${Math.round(v * 100)}%</option>`).join('')}</select></label>
+      </div>
+    </section>` : ''}
     <section class="set-section">
       <label class="check"><input type="checkbox" name="customScrollbar" ${p.custom ? 'checked' : ''}> ${esc(t('ui.customScrollbar'))}</label>
       <div class="formgrid">
@@ -137,6 +145,14 @@ function renderUi() {
     </section>`;
   $('#set-pane').addEventListener('change', (e) => {
     const { name } = e.target;
+    if (name === 'zoom') {
+      api('/api/settings', { method: 'PUT', body: { zoom: Number(e.target.value) } }).then((s) => {
+        S.settings = s;
+        applyZoom(s.zoom);
+        flashSaved();
+      });
+      return;
+    }
     if (name === 'customScrollbar') {
       store.set('customScrollbar', e.target.checked);
       $('#set-pane select[name=scrollbar]').disabled = !e.target.checked;

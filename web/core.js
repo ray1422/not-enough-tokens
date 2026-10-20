@@ -236,6 +236,14 @@ document.addEventListener('click', (e) => {
 });
 addEventListener('scroll', hideTip, true);
 
+// Desktop app display scale (Settings -> UI tuning), stored server-side since the
+// app's origin (a random port) changes every launch.
+export function applyZoom(z = 1) {
+  if (!window.netApp?.setZoom) return;
+  window.netApp.setZoom(z);
+  document.documentElement.style.setProperty('--zoom', z);
+}
+
 export function applyTheme() {
   const th = store.get('theme', 'system');
   if (th === 'system') delete document.documentElement.dataset.theme;

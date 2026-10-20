@@ -378,6 +378,11 @@ async function handle(req, res, ctx) {
       if (!['auto', 'zh-TW', 'en'].includes(b.locale)) return send(res, 400, { error: 'unknown locale' });
       s.locale = b.locale;
     }
+    if (b.zoom != null) {
+      const z = Number(b.zoom);
+      if (!(z >= 0.5 && z <= 2)) return send(res, 400, { error: 'zoom must be 0.5..2' });
+      s.zoom = z;
+    }
     const int = (k, lo, hi) => {
       if (b[k] == null) return;
       const v = Number(b[k]);

@@ -69,6 +69,12 @@ app.whenReady().then(async () => {
   const windowMenu = { role: 'windowMenu', submenu: [{ role: 'minimize' }, { role: 'zoom' }, { role: 'close' }, { type: 'separator' }, { role: 'front' }] };
   Menu.setApplicationMenu(process.platform === 'darwin' ? Menu.buildFromTemplate([{ role: 'appMenu' }, { role: 'editMenu' }, windowMenu]) : null);
   const hex = /^#[0-9a-f]{6}$/i;
+  // The top bar scales with the page; the native buttons don't, so re-center them.
+  ipcMain.on('zoom', (e, z) => {
+    if (!win || e.sender !== win.webContents || !(z >= 0.5 && z <= 2)) return;
+    if (process.platform === 'linux') win.setTitleBarOverlay({ height: Math.round(TOP_BAR * z) });
+    if (process.platform === 'darwin') win.setWindowButtonPosition({ x: 16, y: Math.round(18 + (TOP_BAR * (z - 1)) / 2) });
+  });
   ipcMain.on('titlebar-colors', (e, c) => {
     if (!win || e.sender !== win.webContents || process.platform !== 'linux') return;
     if (hex.test(c?.color) && hex.test(c?.symbolColor)) win.setTitleBarOverlay({ color: c.color, symbolColor: c.symbolColor });

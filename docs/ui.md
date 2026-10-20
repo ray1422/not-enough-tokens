@@ -40,6 +40,7 @@ Keep status text short; put the why behind an (i) with `infoTip(text)` (`web/cor
 ## Desktop window (Electron)
 
 - The top bar doubles as the title bar. macOS draws its traffic lights over it (`hiddenInset`). On Linux, Electron draws the window buttons as `titleBarOverlay`, in the order of the desktop's button layout; `.app-linux .topbar` leaves room via `env(titlebar-area-*)` and sends its colors through `preload.cjs` whenever the theme changes.
+- Display scale (Settings → UI tuning, desktop app only) is Electron's zoom factor via the preload, kept in `settings.json` since the app's origin (a random port) changes every launch. The native buttons don't scale, so main re-centers them: the Linux overlay height becomes 52 × zoom, the macOS traffic lights move down by half the extra height, and `.app-mac .topbar` divides its 88px inset by `--zoom`.
 - No menu bar off macOS (About is in Settings). macOS keeps the app, Edit and Window menus: ⌘C/⌘V/⌘W only work through visible menu items.
 
 ## Custom page scrollbar
