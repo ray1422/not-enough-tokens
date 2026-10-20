@@ -23,6 +23,7 @@
   --link: #a95f32;           /* text links: 4.6:1 on the page */
   --danger: #b53333;
   --good: #3f8a4a;
+  --warn: #8a6a00;           /* ochre, kept off the copper accent's hue */
   --s1: #3d7cc9; /* input */
   --s2: #c97a47; /* output */
   --s3: #159a9c; /* cache read */
@@ -75,6 +76,7 @@
     --link: #dc905d;
     --danger: #e06c6c;
     --good: #6fb36f;
+    --warn: #d6b24a;
     --s1: #3d7cc9;
     --s2: #c0703f;
     --s3: #159a9c;
@@ -89,7 +91,7 @@
   --bg: #141413; --surface: #1f1e1d; --surface-2: #2a2927; --border: #33322f; --border-strong: #46453f;
   --text: #faf9f5; --text-2: #c2c0b6; --muted: #8f8d85;
   --accent: #dc905d; --accent-strong: #a95f32; --accent-hover: #93512a; --accent-soft: #3a2a20; --link: #dc905d;
-  --danger: #e06c6c; --good: #6fb36f;
+  --danger: #e06c6c; --good: #6fb36f; --warn: #d6b24a;
   --s1: #3d7cc9; --s2: #c0703f; --s3: #159a9c; --s4: #b5871a; --s5: #a95ca8;
   --grid: #2b2a27; --shadow: none;
 }

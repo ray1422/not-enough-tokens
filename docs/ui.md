@@ -11,6 +11,7 @@ Rounded corners are curvature-continuous (G2), never a circular arc. The rule is
 
 - Anthropic's public brand guidelines: warm neutrals, Poppins for UI, Lora for prose, the monospace face for numbers.
 - The accent is shifted from the brand orange toward copper to match the logo (`--accent`, `--accent-strong`, `--link`).
+- Status colors: `--good`, `--danger`, and `--warn`, an ochre pushed toward yellow (hue ~46° against the accent's ~24°) so a warning never reads as the accent. Each is at least 4.5:1 on `--bg` and `--surface` in both modes.
 - Every color is a token in `style.css`, defined for light and dark, both under `prefers-color-scheme` and under `[data-theme]` (the theme switch).
 - The chart palette `--s1`…`--s5` was validated for color-vision deficiency in both modes. Re-validate before changing a series color.
 
