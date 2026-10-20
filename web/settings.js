@@ -20,7 +20,7 @@ export function showSettings(tab) {
   const view = $('#settings-view');
   view.innerHTML = `<div class="set-wrap">
     <header class="set-head">
-      <button class="icon" id="set-back" aria-label="${esc(t('set.close'))}">←</button>
+      <button class="icon" id="set-back" aria-label="${esc(t('set.close'))}"><svg class="ic"><use href="#i-back"/></svg></button>
       <h2>${esc(t('set.title'))}</h2>
       <span class="saved" id="set-saved" hidden>${esc(t('set.saved'))}</span>
     </header>

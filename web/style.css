@@ -344,7 +344,10 @@ tr.clickable:hover td { background: var(--surface-2); }
 tr.current td:first-child { color: var(--link); font-weight: 500; }
 tr.child td { color: var(--text-2); background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
 tr.child td:first-child { padding-left: 32px; font-family: var(--mono); font-size: 11.5px; }
-.caret { display: inline-block; width: 16px; color: var(--muted); }
+/* SVG, not ▸/▾: text arrows sit differently in every fallback font. */
+.caret { display: inline-block; width: 16px; color: var(--muted); vertical-align: -2px; }
+.caret .ic { transform: rotate(-90deg); transition: transform .15s; }
+.caret.open .ic { transform: none; }
 .count { color: var(--muted); font: 11px var(--mono); border: 1px solid var(--border-strong); border-radius: var(--r-pill); padding: 0 6px; margin-left: 4px; }
 .unpriced { color: var(--s4); }
 
@@ -352,7 +355,7 @@ tr.child td:first-child { padding-left: 32px; font-family: var(--mono); font-siz
 #settings-view { max-width: 1080px; margin: 0 auto; padding: 20px 24px; }
 .set-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
 .set-head h2 { margin: 0; font: 600 22px var(--sans); letter-spacing: -.3px; }
-.set-head .icon { width: 34px; height: 32px; padding: 0; font-size: 16px; }
+.set-head .icon { display: inline-grid; place-items: center; width: 34px; height: 32px; padding: 0; }
 .saved { color: var(--good); font-size: 13px; }
 .set-body { display: grid; grid-template-columns: 200px 1fr; gap: 28px; align-items: start; }
 .set-tabs { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 72px; }

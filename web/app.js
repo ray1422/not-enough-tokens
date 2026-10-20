@@ -455,7 +455,7 @@ function renderTables(L) {
         label: t('col.project'),
         cell: (r) =>
           r.children
-            ? `${expandable(r) ? `<span class="caret">${S.expanded.has(r.key) ? '▾' : '▸'}</span>` : '<span class="caret"></span>'}${esc(r.name)}${expandable(r) ? ` <span class="count">${r.children.size}</span>` : ''}`
+            ? `${expandable(r) ? `<span class="caret ${S.expanded.has(r.key) ? 'open' : ''}"><svg class="ic sm"><use href="#i-chevron"/></svg></span>` : '<span class="caret"></span>'}${esc(r.name)}${expandable(r) ? ` <span class="count">${r.children.size}</span>` : ''}`
             : esc(r.name),
         title: (r) => r.title || '',
         sortVal: (r) => r.name,
