@@ -12,6 +12,8 @@ import { KINDS, loadPrices, lookup, refreshPrices, savePrices } from './core/pri
 import { COLS, Ledger, readUsageRows } from './core/ledger.js';
 import { loadProjects } from './core/projects.js';
 import { syncInWorker } from './core/sync-worker.js';
+import { discover } from './core/discover.js';
+import { testSsh } from './sources/ssh.js';
 import { loadSettings, saveSettings } from './core/settings.js';
 
 const WEB = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'web');
@@ -305,6 +307,49 @@ async function handle(req, res, ctx) {
       version: VERSION,
       hostname: os.hostname(),
     });
+  }
+
+  // One BatchMode ssh attempt with the given (unsaved) settings.
+  // `known` is the machine with the same fingerprint, if any.
+  // An untrusted host key may still be a known machine under another name (a
+  // Tailscale name for a LAN box): retry with each machine's host as HostKeyAlias,
+  // the way fallback hosts connect; only a matching key gets in.
+  if (p === '/api/test-connection' && method === 'POST') {
+    const input = await body(req);
+    const machines = loadMachines();
+    let r = await testSsh({ ...input, hostKeyAlias: undefined });
+    if (r.result === 'hostkey') {
+      for (const m of machines.filter((x) => x.type === 'ssh' && x.fingerprint && x.host)) {
+        const again = await testSsh({ ...input, hostKeyAlias: m.host });
+        if (again.result === 'ok' || again.result === 'auth') {
+          r = { ...again, keyOf: m.id };
+          break;
+        }
+      }
+    }
+    r.known = (r.fingerprint && machines.find((m) => m.fingerprint === r.fingerprint)?.id) || null;
+    return send(res, 200, r);
+  }
+
+  // Machines found over mDNS / Tailscale, each marked with the machine it already is.
+  if (p === '/api/discover' && method === 'GET') {
+    const sources = (url.searchParams.get('sources') || 'mdns,tailscale').split(',').filter((s) => ['mdns', 'tailscale'].includes(s));
+    const r = await discover({ sources });
+    const norm = (h) => String(h || '').toLowerCase().replace(/\.$/, '');
+    const known = new Map();
+    const machines = loadMachines();
+    for (const m of machines) for (const h of [m.host, ...(m.altHosts || []), m.lastHost, m.lastAddress]) if (h) known.set(norm(h), m.id);
+    // Known only by an address it was found under; names prove nothing. Testing the
+    // connection reads the fingerprint and settles it.
+    for (const d of r.machines) {
+      const names = [d.mdns?.host, ...(d.mdns?.addrs || []), d.tailscale?.host, ...(d.tailscale?.ips || [])];
+      d.known = names.map((h) => known.get(norm(h))).find(Boolean) || null;
+      // Names it was found under that the machine doesn't list yet: offered as fallbacks.
+      const m = machines.find((x) => x.id === d.known && x.type === 'ssh');
+      const have = new Set([m?.host, ...(m?.altHosts || [])].filter(Boolean).map(norm));
+      d.newHosts = m ? [d.mdns?.host, d.tailscale?.host].filter((h) => h && !have.has(norm(h))) : [];
+    }
+    return send(res, 200, r);
   }
 
   if (p === '/api/usage' && method === 'GET') {

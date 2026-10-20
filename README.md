@@ -55,7 +55,7 @@ GitHub Actions builds every package for each PR into `main` or `release`, as a c
 ## Machines
 
 - **This machine** is added automatically.
-- **Remote machines** are added in Settings → Machines, by IP, hostname or an alias from `~/.ssh/config`. They are reached with the system `ssh`, so keys, agents and ProxyJump all work. Password, passphrase and host-key prompts show up as dialogs in the console.
+- **Remote machines** are added in Settings → Machines, by IP, hostname or an alias from `~/.ssh/config`, or picked from **Discover**, which lists machines on the local network (mDNS) and your Tailscale peers. They are reached with the system `ssh`, so keys, agents and ProxyJump all work. Password, passphrase and host-key prompts show up as dialogs in the console.
 - Nothing is written or installed on a remote. If it has python3 ≥ 3.6, the records are parsed there and only compact results come back; otherwise plain shell tools are used.
 - **Changing addresses:** list fallback hosts (for example a Tailscale name) under the machine. They are tried in order, and each is checked to be the same machine before anything is read. If you add a new address as a separate machine, the first sync notices it is one you already have and offers to merge it.
 - **Removing** a machine keeps its collected data unless you tick delete. Add the same machine back later and it continues from that data. Claude Code deletes old transcripts, so the collected data may be the only record of older usage.

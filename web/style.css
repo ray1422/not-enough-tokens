@@ -374,8 +374,31 @@ label.check { display: flex; gap: 8px; align-items: baseline; font-size: 13px; m
 .mrow .btns { display: flex; gap: 6px; }
 .mcard .meta { color: var(--muted); font: 12px var(--mono); word-break: break-all; }
 .mcard .edit { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 12px; }
-.add-box { display: grid; }
-.add-box > button { justify-self: start; border-style: dashed; color: var(--text-2); }
+.pane-head { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 12px; }
+#add-form { margin-bottom: 12px; }
+#add-form h3 { margin: 0 0 4px; font: 600 15px var(--sans); }
+.modal.discover { width: min(560px, 100%); align-self: start; margin-top: 12vh; } /* stays put as sources filter the list */
+.src-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.tag { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 11px; border-radius: var(--r-pill); color: var(--text-2); }
+.tag.on { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
+.tag:disabled { opacity: .6; cursor: default; }
+.tag .ic { align-self: center; }
+.tag .why { color: var(--muted); font-size: 12px; }
+.disc-list { display: grid; align-content: start; gap: 8px; height: min(52vh, 420px); overflow: auto; }
+/* Name, source and status on top; addresses below with the actions bottom right. */
+.disc-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-md); }
+.disc-row .top { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.disc-row .via { color: var(--muted); font-size: 12px; }
+.disc-row .meta { color: var(--muted); font: 12px var(--mono); word-break: break-all; align-self: end; }
+.disc-row .acts { display: flex; align-items: center; gap: 6px; align-self: end; }
+.disc-row .acts button { padding: 3px 10px; font-size: 12.5px; }
+/* Test / discover outcome, small at the right of its row or footer. */
+.status { margin-left: auto; color: var(--text-2); font-size: 12px; text-align: right; }
+.foot .status { margin-left: 0; margin-right: auto; align-self: center; text-align: left; }
+.status.ok { color: var(--good); }
+.status.warn { color: var(--warn); }
+.status.bad { color: var(--danger); }
+
 #add-form { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px 18px; }
 #add-form h3 { margin: 0 0 12px; font: 600 15px var(--sans); }
 .ptable input { width: 62px; text-align: right; font: 12px var(--mono); padding: 4px 6px; }
