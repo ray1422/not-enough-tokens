@@ -1,12 +1,13 @@
 // Web console: top bar, summary cards, chart, breakdown tables, sync + askpass.
 import {
-  $, KINDS, KIND_COLOR, H, RANGES, S, addInto, api, applyTheme, emptyAgg, esc, fmtAgo, fmtDay, fmtInt, fmtTok, fmtUsd,
+  $, KINDS, KIND_COLOR, H, RANGES, S, addInto, api, applyTheme, applyZoom, emptyAgg, esc, fmtAgo, fmtDay, fmtInt, fmtTok, fmtUsd,
   kindLabel, machineName, machineSince, modal, nowWall, periodLabel, periodOf, setTz, shortProject, store, tok, totalCost,
   totalTok, unpricedTok, wallOf,
 } from './core.js';
 import { setLocale, t, translateDom } from './i18n.js';
 import { askHostKey, askMerge, initSettings, refreshSettings, showSettings } from './settings.js';
 import { initLogoFx } from './logo-fx.js';
+import { applyScrollbar, initScrollbar, scrollbarPrefs } from './scrollbar.js';
 
 function* rows() {
   if (!S.usage) return;
@@ -454,7 +455,7 @@ function renderTables(L) {
         label: t('col.project'),
         cell: (r) =>
           r.children
-            ? `${expandable(r) ? `<span class="caret">${S.expanded.has(r.key) ? '▾' : '▸'}</span>` : '<span class="caret"></span>'}${esc(r.name)}${expandable(r) ? ` <span class="count">${r.children.size}</span>` : ''}`
+            ? `${expandable(r) ? `<span class="caret ${S.expanded.has(r.key) ? 'open' : ''}"><svg class="ic sm"><use href="#i-chevron"/></svg></span>` : '<span class="caret"></span>'}${esc(r.name)}${expandable(r) ? ` <span class="count">${r.children.size}</span>` : ''}`
             : esc(r.name),
         title: (r) => r.title || '',
         sortVal: (r) => r.name,
@@ -576,12 +577,14 @@ async function loadState() {
   const st = await api('/api/state');
   S.machines = st.machines;
   S.dataDir = st.dataDir;
+  S.version = st.version;
   if (!S.settings || st.settings.timezone !== S.settings.timezone) setTz(st.settings.timezone);
   if (!S.settings || st.settings.locale !== S.settings.locale) {
     setLocale(st.settings.locale);
     translateDom();
   }
   S.settings = st.settings;
+  applyZoom(S.settings.zoom);
   for (const id of st.syncing) S.syncing.add(id);
   if (!store.get('selected', null)) S.selected = new Set(S.machines.map((m) => m.id));
   for (const id of [...S.selected]) if (!S.machines.some((m) => m.id === id)) S.selected.delete(id);
@@ -743,10 +746,16 @@ function wire() {
   });
 }
 
-// In the macOS app the window has no title bar: the top bar doubles as one.
-if (/Electron\//.test(navigator.userAgent) && /Mac/.test(navigator.platform)) document.documentElement.classList.add('app-mac');
+// In the desktop app the window has no title bar: the top bar doubles as one.
+// macOS draws its buttons over it; on Linux Electron's overlay takes the colors we send.
+if (/Electron\//.test(navigator.userAgent)) {
+  if (/Mac/.test(navigator.platform)) document.documentElement.classList.add('app-mac');
+  else if (window.netApp) document.documentElement.classList.add('app-linux');
+}
 applyTheme();
 initLogoFx($('.brand'));
+initScrollbar();
+applyScrollbar(scrollbarPrefs(store));
 initSettings({ loadState, loadUsage, renderAll, startSync, log });
 wire();
 await loadState();

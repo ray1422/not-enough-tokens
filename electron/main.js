@@ -1,7 +1,9 @@
 // Electron shell: runs the same HTTP server in-process on a random loopback port
 // and shows the console in a locked-down window. Works with a bundled Electron
 // (macOS .app) or the system one on Linux (`electron /usr/lib/not-enough-tokens`).
-import { BrowserWindow, app, nativeTheme, session, shell } from 'electron';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { BrowserWindow, Menu, app, ipcMain, nativeTheme, session, shell } from 'electron';
 import { startServer } from '../src/server.js';
 
 if (!app.requestSingleInstanceLock()) app.quit();
@@ -10,6 +12,21 @@ let win = null;
 let server = null; // { url, openUrl }
 
 const isHttp = (u) => /^https?:\/\//i.test(u);
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const TOP_BAR = 52; // .app-linux .topbar min-height
+
+// The top bar doubles as the title bar. macOS draws its traffic lights over it;
+// on Linux Electron draws the window buttons as an overlay, in the order the
+// desktop's button layout gives, and the page leaves room via env(titlebar-area-*).
+function titleBar() {
+  if (process.platform === 'darwin') return { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 16, y: 18 } };
+  if (process.platform !== 'linux') return {};
+  const dark = nativeTheme.shouldUseDarkColors;
+  return {
+    titleBarStyle: 'hidden',
+    titleBarOverlay: { color: dark ? '#141413' : '#faf9f5', symbolColor: dark ? '#c2c0b6' : '#5e5d59', height: TOP_BAR },
+  };
+}
 
 function createWindow() {
   win = new BrowserWindow({
@@ -19,12 +36,13 @@ function createWindow() {
     minHeight: 480,
     title: 'Not Enough Tokens',
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#141413' : '#faf9f5',
-    ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 16, y: 18 } } : {}),
+    ...titleBar(),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
       spellcheck: false,
+      preload: path.join(HERE, 'preload.cjs'),
     },
   });
 
@@ -44,6 +62,23 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  // Off macOS the default menu bar only holds Electron's own items; About lives in
+  // Settings. macOS dispatches ⌘C/⌘V/⌘W/⌘M through the menu (hidden items lose
+  // them), so it keeps the app, Edit and Window menus; Close moves from the dropped
+  // File menu into Window.
+  const windowMenu = { role: 'windowMenu', submenu: [{ role: 'minimize' }, { role: 'zoom' }, { role: 'close' }, { type: 'separator' }, { role: 'front' }] };
+  Menu.setApplicationMenu(process.platform === 'darwin' ? Menu.buildFromTemplate([{ role: 'appMenu' }, { role: 'editMenu' }, windowMenu]) : null);
+  const hex = /^#[0-9a-f]{6}$/i;
+  // The top bar scales with the page; the native buttons don't, so re-center them.
+  ipcMain.on('zoom', (e, z) => {
+    if (!win || e.sender !== win.webContents || !(z >= 0.5 && z <= 2)) return;
+    if (process.platform === 'linux') win.setTitleBarOverlay({ height: Math.round(TOP_BAR * z) });
+    if (process.platform === 'darwin') win.setWindowButtonPosition({ x: 16, y: Math.round(18 + (TOP_BAR * (z - 1)) / 2) });
+  });
+  ipcMain.on('titlebar-colors', (e, c) => {
+    if (!win || e.sender !== win.webContents || process.platform !== 'linux') return;
+    if (hex.test(c?.color) && hex.test(c?.symbolColor)) win.setTitleBarOverlay({ color: c.color, symbolColor: c.symbolColor });
+  });
   // The page needs no camera, notifications, etc.
   session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));
   server = await startServer({ port: 0, host: '127.0.0.1' });

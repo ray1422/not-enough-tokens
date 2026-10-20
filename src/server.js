@@ -12,10 +12,13 @@ import { KINDS, loadPrices, lookup, refreshPrices, savePrices } from './core/pri
 import { COLS, Ledger, readUsageRows } from './core/ledger.js';
 import { loadProjects } from './core/projects.js';
 import { syncInWorker } from './core/sync-worker.js';
+import { discover } from './core/discover.js';
+import { testSsh } from './sources/ssh.js';
 import { loadSettings, saveSettings } from './core/settings.js';
 
 const WEB = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'web');
 const PRICE_MAX_AGE = 6 * 3600_000;
+const VERSION = JSON.parse(fs.readFileSync(path.join(WEB, '..', 'package.json'), 'utf8')).version;
 
 // ---------- events (SSE) ----------
 const clients = new Set();
@@ -301,8 +304,51 @@ async function handle(req, res, ctx) {
       prices: { fetchedAt: pr.fetchedAt, lastError: pr.lastError || null },
       syncing: job ? [...job.running] : [],
       dataDir: dataDir(),
+      version: VERSION,
       hostname: os.hostname(),
     });
+  }
+
+  // One BatchMode ssh attempt with the given (unsaved) settings.
+  // `known` is the machine with the same fingerprint, if any.
+  // An untrusted host key may still be a known machine under another name (a
+  // Tailscale name for a LAN box): retry with each machine's host as HostKeyAlias,
+  // the way fallback hosts connect; only a matching key gets in. The retry counts
+  // only if the login then reads that machine's fingerprint; anything less (a
+  // shared or cloned host key, or no login) keeps the plain "host key not trusted",
+  // since saved as its own machine it wouldn't connect with that alias.
+  if (p === '/api/test-connection' && method === 'POST') {
+    const input = await body(req);
+    const machines = loadMachines();
+    let r = await testSsh({ ...input, hostKeyAlias: undefined });
+    if (r.result === 'hostkey') {
+      for (const m of machines.filter((x) => x.type === 'ssh' && x.fingerprint && x.host)) {
+        const again = await testSsh({ ...input, hostKeyAlias: m.host });
+        if (again.result === 'ok' && again.fingerprint === m.fingerprint) {
+          r = again;
+          break;
+        }
+      }
+    }
+    r.known = (r.fingerprint && machines.find((m) => m.fingerprint === r.fingerprint)?.id) || null;
+    return send(res, 200, r);
+  }
+
+  // Machines found over mDNS / Tailscale, each marked with the machine it already is.
+  if (p === '/api/discover' && method === 'GET') {
+    const sources = (url.searchParams.get('sources') || 'mdns,tailscale').split(',').filter((s) => ['mdns', 'tailscale'].includes(s));
+    const r = await discover({ sources });
+    const norm = (h) => String(h || '').toLowerCase().replace(/\.$/, '');
+    const known = new Map();
+    const machines = loadMachines();
+    for (const m of machines) for (const h of [m.host, ...(m.altHosts || []), m.lastHost, m.lastAddress]) if (h) known.set(norm(h), m.id);
+    // Known only by an address it was found under; names prove nothing. Testing the
+    // connection reads the fingerprint and settles it.
+    for (const d of r.machines) {
+      const names = [d.mdns?.host, ...(d.mdns?.addrs || []), d.tailscale?.host, ...(d.tailscale?.ips || [])];
+      d.known = names.map((h) => known.get(norm(h))).find(Boolean) || null;
+    }
+    return send(res, 200, r);
   }
 
   if (p === '/api/usage' && method === 'GET') {
@@ -334,6 +380,11 @@ async function handle(req, res, ctx) {
     if (b.locale != null) {
       if (!['auto', 'zh-TW', 'en'].includes(b.locale)) return send(res, 400, { error: 'unknown locale' });
       s.locale = b.locale;
+    }
+    if (b.zoom != null) {
+      const z = Number(b.zoom);
+      if (!(z >= 0.5 && z <= 2)) return send(res, 400, { error: 'zoom must be 0.5..2' });
+      s.zoom = z;
     }
     const int = (k, lo, hi) => {
       if (b[k] == null) return;

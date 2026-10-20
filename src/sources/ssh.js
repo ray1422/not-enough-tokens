@@ -12,6 +12,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { spawn } from 'node:child_process';
 import { LineSplitter } from '../core/lines.js';
+import { disclaimed } from '../core/disclaim.js';
 
 const q = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
 const remotePath = (p) => (p.startsWith('~/') ? `"$HOME"/${q(p.slice(2))}` : q(p));
@@ -59,7 +60,8 @@ function runRemote(machine, script, onData, opts) {
       });
     }
     // detached: no controlling tty, so ssh must use SSH_ASKPASS instead of the terminal.
-    const child = spawn('ssh', sshArgs(machine, opts), { env, stdio: ['pipe', 'pipe', 'pipe'], detached: true });
+    const [cmd, args] = disclaimed('ssh', sshArgs(machine, opts));
+    const child = spawn(cmd, args, { env, stdio: ['pipe', 'pipe', 'pipe'], detached: true });
     let stderr = '';
     let failed = null;
     const deliver = (c) => {
@@ -114,6 +116,46 @@ function runRemote(machine, script, onData, opts) {
 // ssh refuses outright (no prompt) when a known host answers with another key: the
 // address may now belong to someone else, or the box was reinstalled. Pull out what
 // the console needs to explain it and, if the user says so, forget the old key.
+// One non-interactive login attempt (BatchMode: no prompts, no shared master), for
+// "Test connection". Resolves to { result, detail, fingerprint }; result is ok |
+// auth | hostkey | hostkeyChanged | refused | timeout | unreachable | error. On ok
+// it also reads the fingerprint (the same read-only lines a sync runs), so the
+// console can tell which known machine this is.
+export function testSsh({ host, port, user, identityFile, hostKeyAlias }) {
+  host = String(host || '').trim();
+  if (!host || host.startsWith('-')) return Promise.resolve({ result: 'error', detail: 'host is required' });
+  const a = ['-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=6', '-o', 'ControlMaster=no', '-o', 'ControlPath=none', '-o', 'StrictHostKeyChecking=yes'];
+  if (Number(port)) a.push('-p', String(Number(port)));
+  if (user) a.push('-l', String(user).trim());
+  if (identityFile) a.push('-i', String(identityFile).trim().replace(/^~(?=\/)/, os.homedir()));
+  if (hostKeyAlias) a.push('-o', `HostKeyAlias=${hostKeyAlias}`);
+  a.push('--', host, FP_SCRIPT);
+  return new Promise((resolve) => {
+    const [cmd, args] = disclaimed('ssh', a);
+    const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+    let err = '', out = '';
+    child.stdout.on('data', (d) => (out += d));
+    child.stderr.on('data', (d) => (err += d));
+    const timer = setTimeout(() => child.kill(), 15000);
+    child.on('error', (e) => resolve({ result: 'error', detail: e.message }));
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      const last = err.trim().split('\n').pop() || '';
+      const result =
+        code === 0 ? 'ok'
+        : /REMOTE HOST IDENTIFICATION HAS CHANGED/.test(err) ? 'hostkeyChanged'
+        : /Host key verification failed|No \S+ host key is known/.test(err) ? 'hostkey'
+        : /Permission denied|Too many authentication failures/.test(err) ? 'auth'
+        : /Connection refused/.test(err) ? 'refused'
+        : /timed out/i.test(err) ? 'timeout'
+        : /No route to host|Could not resolve|not known|Network is unreachable|Host is down/.test(err) ? 'unreachable'
+        : 'error';
+      const fingerprint = /@@NET FP (.+)/.exec(out)?.[1].trim() || null;
+      resolve({ result, detail: code === 0 ? '' : last, fingerprint });
+    });
+  });
+}
+
 export function hostKeyChanged(stderr) {
   if (!/REMOTE HOST IDENTIFICATION HAS CHANGED/.test(stderr)) return null;
   const fp = /sent by the remote host is\s+(SHA256:[A-Za-z0-9+/=]+)/.exec(stderr);
@@ -122,14 +164,17 @@ export function hostKeyChanged(stderr) {
   return { fingerprint: fp?.[1] || null, file: off?.[1] || null, line: off ? Number(off[2]) : null, name: name?.[1] || null };
 }
 
+// The machine's fingerprint: machine-id on Linux, the hardware UUID on macOS.
+const FP_SCRIPT = `fp=$(cat /etc/machine-id 2>/dev/null)
+[ -n "$fp" ] || fp=$(ioreg -rd1 -c IOPlatformExpertDevice 2>/dev/null | awk -F'"' '/IOPlatformUUID/{print $4}')
+[ -n "$fp" ] || fp="host:$(hostname)"
+echo "@@NET FP $fp"`;
+
 function listScript(extraRoots) {
   const roots = ['~/.claude/projects', '${XDG_CONFIG_HOME:-$HOME/.config}/claude/projects', ...extraRoots];
   const rootArgs = roots.map((r) => (r.startsWith('${') ? `"${r}"` : remotePath(r))).join(' ');
   return `
-fp=$(cat /etc/machine-id 2>/dev/null)
-[ -n "$fp" ] || fp=$(ioreg -rd1 -c IOPlatformExpertDevice 2>/dev/null | awk -F'"' '/IOPlatformUUID/{print $4}')
-[ -n "$fp" ] || fp="host:$(hostname)"
-echo "@@NET FP $fp"
+${FP_SCRIPT}
 echo "@@NET ADDR \${SSH_CONNECTION:-}"
 os=$(uname -s)
 # Python mode needs a real python3 >= 3.6. On macOS without the Command Line

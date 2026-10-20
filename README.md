@@ -14,7 +14,7 @@ curl -fsSL https://raw.githubusercontent.com/ray1422/not-enough-tokens/main/pack
 
 It downloads the latest dmg from [Releases](https://github.com/ray1422/not-enough-tokens/releases) and copies the app into `/Applications`. [Read the script](packaging/mac/install.sh) first if you like; it is short.
 
-The app is ad-hoc signed, not notarized by Apple, so a dmg downloaded in a browser is blocked the first time you open the app ("Apple could not verify…"). Either use the line above (files fetched with `curl` are not quarantined), or open the dmg as usual and then allow the app once in System Settings → Privacy & Security → Open Anyway. The first sync of a machine on your local network asks for Local Network access; allow it, or ssh gets "No route to host".
+The app is ad-hoc signed, not notarized by Apple, so a dmg downloaded in a browser is blocked the first time you open the app ("Apple could not verify…"). Either use the line above (files fetched with `curl` are not quarantined), or open the dmg as usual and then allow the app once in System Settings → Privacy & Security → Open Anyway.
 
 **Linux:** the AppImage from Releases runs on most distributions (`chmod +x` it first). Arch users can use the AUR `PKGBUILD` attached to each release; Nix users `nix run github:ray1422/not-enough-tokens`. See [Packages](#packages) for building them yourself.
 
@@ -55,7 +55,7 @@ GitHub Actions builds every package for each PR into `main` or `release`, as a c
 ## Machines
 
 - **This machine** is added automatically.
-- **Remote machines** are added in Settings → Machines, by IP, hostname or an alias from `~/.ssh/config`. They are reached with the system `ssh`, so keys, agents and ProxyJump all work. Password, passphrase and host-key prompts show up as dialogs in the console.
+- **Remote machines** are added in Settings → Machines, by IP, hostname or an alias from `~/.ssh/config`, or picked from **Discover**, which lists machines on the local network (mDNS) and your Tailscale peers. They are reached with the system `ssh`, so keys, agents and ProxyJump all work. Password, passphrase and host-key prompts show up as dialogs in the console.
 - Nothing is written or installed on a remote. If it has python3 ≥ 3.6, the records are parsed there and only compact results come back; otherwise plain shell tools are used.
 - **Changing addresses:** list fallback hosts (for example a Tailscale name) under the machine. They are tried in order, and each is checked to be the same machine before anything is read. If you add a new address as a separate machine, the first sync notices it is one you already have and offers to merge it.
 - **Removing** a machine keeps its collected data unless you tick delete. Add the same machine back later and it continues from that data. Claude Code deletes old transcripts, so the collected data may be the only record of older usage.

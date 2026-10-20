@@ -1,6 +1,6 @@
 {
   "name": "not-enough-tokens",
-  "version": "0.1.2",
+  "version": "0.1.5",
   "description": "Incremental Claude Code usage tracker across machines, with a web console",
   "license": "BSD-3-Clause",
   "type": "module",
@@ -12,7 +12,7 @@
     "serve": "node src/cli.js serve",
     "sync": "node src/cli.js sync",
     "app": "electron .",
-    "dist:mac": "electron-builder --mac --publish never",
+    "dist:mac": "mkdir -p build/mac && cc -O2 -Wall -arch arm64 -o build/mac/net-disclaim packaging/mac/disclaim.c && electron-builder --mac --publish never && rm -rf dist/mac-arm64",
     "install:linux": "sh packaging/linux/install.sh",
     "dist:linux": "electron-builder --linux AppImage --x64 --arm64 --publish never"
   },
@@ -53,7 +53,13 @@
       "extendInfo": {
         "NSLocalNetworkUsageDescription": "Not Enough Tokens connects over SSH to the machines you add, including ones on your local network, to read their Claude Code usage."
       },
-      "hardenedRuntime": false
+      "hardenedRuntime": false,
+      "extraFiles": [
+        {
+          "from": "build/mac/net-disclaim",
+          "to": "MacOS/net-disclaim"
+        }
+      ]
     },
     "linux": {
       "target": [

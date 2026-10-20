@@ -3,7 +3,7 @@
 # the result (with .SRCINFO) to the GitHub Release, ready to push to the AUR.
 # For a build from a local checkout, use packaging/arch/PKGBUILD instead.
 pkgname=not-enough-tokens
-pkgver=0.1.2
+pkgver=0.1.5
 pkgrel=1
 pkgdesc='Claude Code usage across machines, with a local web console'
 arch=('any')
