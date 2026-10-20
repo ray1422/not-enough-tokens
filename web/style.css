@@ -31,6 +31,7 @@
   --s5: #a95ca8; /* cache write 1h */
   --grid: #ecebe4;
   --shadow: 0 1px 2px rgba(20, 20, 19, .04), 0 4px 16px rgba(20, 20, 19, .04);
+  --shadow-pop: 0 10px 28px rgba(20, 20, 19, .18); /* popovers, tooltips */
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   --sans: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "PingFang TC", Arial, sans-serif;
   --serif: "Lora", Georgia, "Noto Serif TC", "Songti TC", serif;
@@ -84,6 +85,7 @@
     --s5: #a95ca8;
     --grid: #2b2a27;
     --shadow: none;
+    --shadow-pop: 0 10px 28px rgba(0, 0, 0, .5);
   }
 }
 :root[data-theme="dark"] {
@@ -93,7 +95,7 @@
   --accent: #dc905d; --accent-strong: #a95f32; --accent-hover: #93512a; --accent-soft: #3a2a20; --link: #dc905d;
   --danger: #e06c6c; --good: #6fb36f; --warn: #d6b24a;
   --s1: #3d7cc9; --s2: #c0703f; --s3: #159a9c; --s4: #b5871a; --s5: #a95ca8;
-  --grid: #2b2a27; --shadow: none;
+  --grid: #2b2a27; --shadow: none; --shadow-pop: 0 10px 28px rgba(0, 0, 0, .5);
 }
 
 * { box-sizing: border-box; }
@@ -214,7 +216,7 @@ code { font: 12px var(--mono); background: var(--surface-2); padding: 1px 5px; b
   position: absolute; top: calc(100% + 8px); left: 0; z-index: 20;
   width: min(320px, calc(100vw - 32px)); max-height: 60vh; overflow: auto;
   background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-lg);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, .18);
+  box-shadow: var(--shadow-pop);
   padding: 6px;
 }
 .pop-head { display: flex; gap: 14px; padding: 6px 10px; font-size: 13px; border-bottom: 1px solid var(--border); }
@@ -283,7 +285,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 20px 24px; display: grid; gap
   display: none; position: absolute; top: calc(100% + 6px); right: 0; z-index: 15;
   width: max-content; max-width: min(320px, calc(100vw - 32px));
   background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-md);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, .18); padding: 8px 10px;
+  box-shadow: var(--shadow-pop); padding: 8px 10px;
   font: 12px var(--sans); color: var(--text); font-weight: 400;
 }
 .since-pop .t { display: block; color: var(--text-2); font-weight: 500; margin-bottom: 4px; }
@@ -296,7 +298,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 20px 24px; display: grid; gap
 .tip-pop {
   position: fixed; z-index: 60; width: max-content; max-width: min(300px, calc(100vw - 16px));
   background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-md);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, .18); padding: 8px 10px;
+  box-shadow: var(--shadow-pop); padding: 8px 10px;
   font: 12px/1.5 var(--sans); color: var(--text); pointer-events: none;
 }
 .hero .big { font: 600 32px/1.1 var(--sans); letter-spacing: -.8px; font-variant-numeric: tabular-nums; }
@@ -446,7 +448,7 @@ label.check { display: flex; gap: 8px; align-items: baseline; font-size: 13px; m
 .tooltip {
   position: fixed; z-index: 40; pointer-events: none;
   background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-ml);
-  padding: 10px 12px; font: 12px var(--mono); box-shadow: 0 8px 24px rgba(0, 0, 0, .16);
+  padding: 10px 12px; font: 12px var(--mono); box-shadow: var(--shadow-pop);
   min-width: 220px;
 }
 .tooltip .t { font: 600 13px var(--sans); margin-bottom: 6px; }

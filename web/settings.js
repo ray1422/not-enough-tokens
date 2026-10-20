@@ -325,18 +325,22 @@ const testForm = (box, self = null) => {
 };
 
 // ---------- Discover ----------
-// Machines found over mDNS and Tailscale; source tags filter the list, and Add fills
-// the add form (LAN name as host, Tailscale name as a fallback host).
+// Machines found over mDNS and Tailscale, one row per source (never merged by name);
+// source tags filter the list, Add fills the add form, and Test tells by fingerprint
+// which known machine a row is, offering its address as a fallback.
 const SOURCES = ['mdns', 'tailscale'];
 // Addresses to use for a found machine, from the sources being shown only: the LAN
 // IP (a .local name needs avahi + nss-mdns to resolve on Linux) and the Tailscale
 // name. For a known machine m, skips any it already lists, by name or by an IP
 // the source reported, so the same box isn't added twice under another spelling.
+// LAN address preference: a regular IPv4, then link-local 169.254 (self-assigned,
+// e.g. a Thunderbolt bridge), then the .local name.
+const lanRank = (a) => (!/^\d+\.\d+\.\d+\.\d+$/.test(a) ? 2 : a.startsWith('169.254.') ? 1 : 0);
 function offer(d, shown, m) {
   const have = new Set([m?.host, ...(m?.altHosts || []), m?.lastAddress].filter(Boolean).map((h) => String(h).toLowerCase()));
   const out = [];
   if (shown.has('mdns') && d.mdns) {
-    const ip = d.mdns.addrs.find((a) => /^\d+\.\d+\.\d+\.\d+$/.test(a)) || d.mdns.host;
+    const ip = [...d.mdns.addrs, d.mdns.host].sort((a, b) => lanRank(a) - lanRank(b))[0];
     if (![d.mdns.host, ...d.mdns.addrs].some((h) => have.has(h.toLowerCase()))) out.push(ip);
   }
   if (shown.has('tailscale') && d.tailscale && ![d.tailscale.host, ...d.tailscale.ips].some((h) => have.has(h.toLowerCase()))) out.push(d.tailscale.host);

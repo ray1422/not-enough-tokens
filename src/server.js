@@ -313,7 +313,10 @@ async function handle(req, res, ctx) {
   // `known` is the machine with the same fingerprint, if any.
   // An untrusted host key may still be a known machine under another name (a
   // Tailscale name for a LAN box): retry with each machine's host as HostKeyAlias,
-  // the way fallback hosts connect; only a matching key gets in.
+  // the way fallback hosts connect; only a matching key gets in. The retry counts
+  // only if the login then reads that machine's fingerprint; anything less (a
+  // shared or cloned host key, or no login) keeps the plain "host key not trusted",
+  // since saved as its own machine it wouldn't connect with that alias.
   if (p === '/api/test-connection' && method === 'POST') {
     const input = await body(req);
     const machines = loadMachines();
@@ -321,8 +324,8 @@ async function handle(req, res, ctx) {
     if (r.result === 'hostkey') {
       for (const m of machines.filter((x) => x.type === 'ssh' && x.fingerprint && x.host)) {
         const again = await testSsh({ ...input, hostKeyAlias: m.host });
-        if (again.result === 'ok' || again.result === 'auth') {
-          r = { ...again, keyOf: m.id };
+        if (again.result === 'ok' && again.fingerprint === m.fingerprint) {
+          r = again;
           break;
         }
       }

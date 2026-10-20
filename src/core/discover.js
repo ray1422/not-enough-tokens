@@ -20,9 +20,6 @@ const usable = (a) => a !== '127.0.0.1' && a !== '::1' && !/^fe80:/i.test(a);
 const SERVICES = [...SSH, ...APPLE];
 
 const short = (h) => String(h || '').replace(/\.$/, '').replace(/\.local$/i, '').toLowerCase();
-// Display names compared loosely: 'Ray的MacBook Air' on both sides, while the host
-// names differ (mDNS RaydeMacBook-Air, Tailscale raymacbook-air).
-const loose = (s) => String(s || '').toLowerCase().replace(/[\s\-_'’.]/g, '');
 
 // ---------- mDNS over UDP ----------
 function encodeName(name) {
@@ -247,29 +244,24 @@ export async function discover({ sources = ['mdns', 'tailscale'], ms = 2500, inc
   const status = (r, on) =>
     !on ? { ok: false, off: true } : r.status === 'fulfilled' ? { ok: true } : { ok: false, reason: r.reason?.reason || 'error', error: r.reason?.message || String(r.reason) };
 
+  // One entry per source and host, never merged: names prove nothing, and testing
+  // the connection reads the fingerprint to tell which machine an entry really is.
   const self = new Set([short(os.hostname())]);
   const selfIps = new Set(Object.values(os.networkInterfaces()).flat().map((i) => i.address));
-  const byKey = new Map();
-  const entry = (key, label) => {
-    if (!byKey.has(key)) byKey.set(key, { key, name: label, mdns: null, tailscale: null });
-    return byKey.get(key);
-  };
+  const machines = [];
   for (const h of (md.status === 'fulfilled' && md.value) || []) {
     if (!includeSelf && (self.has(short(h.host)) || h.addrs.some((a) => selfIps.has(a)))) continue;
     // kind: 'mac' can turn SSH on; 'device' is an Apple phone/tablet/TV (no SSH, not a Mac).
     const kind = isMac(h.model) ? 'mac' : h.apple && h.ssh == null ? 'device' : 'host';
-    entry(short(h.host), h.label).mdns = { host: h.host, addrs: h.addrs, ssh: h.ssh, kind, model: h.model };
+    machines.push({ key: `mdns:${short(h.host)}`, name: h.label, mdns: { host: h.host, addrs: h.addrs, ssh: h.ssh, kind, model: h.model }, tailscale: null });
   }
   for (const p of (ts.status === 'fulfilled' && ts.value) || []) {
     const key = short(p.host.split('.')[0]);
-    if (!includeSelf && (self.has(key) || self.has(short(p.label)))) continue;
-    // Same machine as an mDNS entry if the host or the display name matches.
-    const same = [...byKey.values()].find((e) => e.mdns && !e.tailscale && (e.key === key || loose(e.name) === loose(p.label)));
-    const e = same || entry(key, p.label);
-    e.tailscale = { host: p.host, ips: p.ips, os: p.os, online: p.online };
+    if (!includeSelf && self.has(key)) continue;
+    machines.push({ key: `ts:${key}`, name: p.label, mdns: null, tailscale: { host: p.host, ips: p.ips, os: p.os, online: p.online } });
   }
   return {
     sources: { mdns: status(md, want.has('mdns')), tailscale: status(ts, want.has('tailscale')) },
-    machines: [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    machines: machines.sort((a, b) => a.name.localeCompare(b.name)),
   };
 }
