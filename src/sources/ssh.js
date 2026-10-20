@@ -21,6 +21,18 @@ export function configureAskpass(cfg) {
   askpass = cfg;
 }
 
+// In the macOS app, ssh runs through net-disclaim (packaging/mac/disclaim.c) so
+// Local Network privacy doesn't block LAN hosts. It sits in the outer app's
+// Contents/MacOS; the sync worker runs as Electron's Helper (fork from the main
+// process uses it on macOS), nested inside Contents/Frameworks, so look from the
+// outermost .app in execPath. Elsewhere ssh runs directly.
+const disclaim = (() => {
+  if (process.platform !== 'darwin') return null;
+  const app = /^(.*?\.app)\//.exec(process.execPath)?.[1];
+  const p = app && path.join(app, 'Contents', 'MacOS', 'net-disclaim');
+  return p && fs.existsSync(p) ? p : null;
+})();
+
 function controlDir() {
   const dir = path.join('/tmp', `net-ssh-${process.getuid?.() ?? 'u'}`);
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
@@ -59,7 +71,8 @@ function runRemote(machine, script, onData, opts) {
       });
     }
     // detached: no controlling tty, so ssh must use SSH_ASKPASS instead of the terminal.
-    const child = spawn('ssh', sshArgs(machine, opts), { env, stdio: ['pipe', 'pipe', 'pipe'], detached: true });
+    const [cmd, args] = disclaim ? [disclaim, ['ssh', ...sshArgs(machine, opts)]] : ['ssh', sshArgs(machine, opts)];
+    const child = spawn(cmd, args, { env, stdio: ['pipe', 'pipe', 'pipe'], detached: true });
     let stderr = '';
     let failed = null;
     const deliver = (c) => {
