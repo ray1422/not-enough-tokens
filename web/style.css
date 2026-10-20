@@ -372,7 +372,10 @@ label.check { display: flex; gap: 8px; align-items: baseline; font-size: 13px; m
 .mrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .mrow b { font-weight: 600; }
 .mrow .btns { display: flex; gap: 6px; }
-.mcard .meta { color: var(--muted); font: 12px var(--mono); word-break: break-all; }
+.mcard .meta { color: var(--muted); font: 12px var(--mono); overflow: hidden; }
+.meta .mis { display: block; margin-left: -3ch; }
+.meta .mi { display: inline-block; max-width: calc(100% - 3ch); overflow-wrap: anywhere; }
+.meta .mi::before { content: '·'; display: inline-block; width: 3ch; text-align: center; }
 .mcard .edit { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 12px; }
 .pane-head { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 12px; }
 #add-form { margin-bottom: 12px; }

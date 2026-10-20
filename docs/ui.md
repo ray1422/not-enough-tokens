@@ -50,3 +50,7 @@ The native page scrollbar always spans the full window height, so in the Linux a
 - "Always show" keeps the track and thumb, and `main`/settings leave 15px free.
 - Drag the thumb; a click on the track pages toward it. Only the bar takes pointer events, and only while shown.
 - Inner scrollers (tables, the console) keep native thin scrollbars in the same color.
+
+## Meta lines
+
+Card meta (`ssh … · last IP … · synced … · data since …`) wraps between parts, never inside one unless it alone is too long. Each part carries its `·` in front; `.mis` is shifted left by the separator's width inside an `overflow: hidden` box, so the separator that would start a line is clipped and no line ends or starts with one.

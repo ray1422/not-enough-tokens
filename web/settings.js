@@ -148,6 +148,10 @@ function renderUi() {
 }
 
 // ---------- Machines ----------
+// Meta parts wrap between each other, not inside one (unless it alone is too long).
+// Each part carries its "·" in front, and the one starting a line is clipped off.
+const metaItems = (parts) => `<span class="mis">${parts.map((p) => `<span class="mi">${esc(p)}</span>`).join('')}</span>`;
+
 function machineForm(m = {}) {
   const off = m.type === 'local' ? 'disabled' : '';
   return `<div class="formgrid">
@@ -188,7 +192,7 @@ function renderMachines() {
       .map((m) => {
         const where = m.type === 'local' ? t('m.local') : `ssh ${m.user ? m.user + '@' : ''}${m.host}${m.port ? ':' + m.port : ''}`;
         const via = m.lastHost && m.lastHost !== m.host ? t('m.via', { h: m.lastHost }) : '';
-        const meta = [where, via, m.lastAddress ? t('m.lastAddress', { a: m.lastAddress }) : '', t('m.synced', { ago: fmtAgo(m.lastSyncAt) }), machineSince(m.id) != null ? t('m.since', { d: fmtDay(machineSince(m.id)) }) : ''].filter(Boolean).join(' · ');
+        const meta = [where, via, m.lastAddress ? t('m.lastAddress', { a: m.lastAddress }) : '', t('m.synced', { ago: fmtAgo(m.lastSyncAt) }), machineSince(m.id) != null ? t('m.since', { d: fmtDay(machineSince(m.id)) }) : ''].filter(Boolean);
         return `<div class="mcard" data-id="${esc(m.id)}">
           <div class="mrow"><b>${esc(m.name)}</b>
             <span class="btns">${m.twinOf ? `<button data-act="merge" class="primary">${esc(t('m.merge'))}</button>` : ''}${
@@ -196,7 +200,7 @@ function renderMachines() {
             }<button data-act="sync">${esc(t('m.sync'))}</button><button data-act="edit">${esc(t('m.edit'))}</button>${
               m.type === 'local' ? '' : `<button data-act="del" class="danger">${esc(t('m.remove'))}</button>`
             }</span></div>
-          <div class="meta">${esc(meta)}${m.fingerprint ? `<br>${esc(t('m.id', { id: m.fingerprint }))}` : ''}</div>
+          <div class="meta">${metaItems(meta)}${m.fingerprint ? metaItems([t('m.id', { id: m.fingerprint })]) : ''}</div>
           ${m.lastError ? `<div class="err-text">${esc(m.lastError)}</div>` : ''}
           <div class="edit" hidden>${machineForm(m)}
             ${m.type === 'local' ? '' : `<label class="check"><input type="checkbox" name="resetFingerprint"> ${esc(t('m.resetFp'))}</label>`}
