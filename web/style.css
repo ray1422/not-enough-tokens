@@ -420,8 +420,13 @@ label.check { display: flex; gap: 8px; align-items: baseline; font-size: 13px; m
 }
 .console-head { display: flex; justify-content: space-between; gap: 16px; padding: 7px 24px; cursor: pointer; color: var(--text-2); }
 .console-head span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.console pre { margin: 0; padding: 0 24px; max-height: 0; overflow: auto; transition: max-height .2s; }
-.console.open pre { max-height: 220px; padding-bottom: 10px; }
+/* Opens and closes at the log's real height (0fr -> 1fr), so closing doesn't sit
+   still first the way a max-height transition does. */
+.console-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .2s; }
+.console.open .console-body { grid-template-rows: 1fr; }
+.console-body > div { min-height: 0; overflow: hidden; }
+.console pre { margin: 0; padding: 0 24px 10px; max-height: 220px; overflow: auto; }
+@media (prefers-reduced-motion: reduce) { .console-body { transition: none; } }
 .console .err { color: var(--danger); }
 .console .m { color: var(--link); }
 
