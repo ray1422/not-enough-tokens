@@ -86,6 +86,11 @@ const STRINGS = {
     'tab.general': 'General',
     'tab.machines': 'Machines',
     'tab.prices': 'Prices',
+    'tab.ui': 'UI tuning',
+    'ui.customScrollbar': 'Use the custom scrollbar',
+    'ui.scrollbar': 'Scrollbar',
+    'ui.sbAuto': 'Show while scrolling',
+    'ui.sbAlways': 'Always show',
 
     'gen.language': 'Language',
     'gen.langAuto': 'Follow system',
@@ -256,6 +261,11 @@ const STRINGS = {
     'tab.general': '一般',
     'tab.machines': '機器',
     'tab.prices': '價格',
+    'tab.ui': 'UI 調校',
+    'ui.customScrollbar': '使用自訂捲軸',
+    'ui.scrollbar': '捲軸',
+    'ui.sbAuto': '捲動時顯示',
+    'ui.sbAlways': '永遠顯示',
 
     'gen.language': '語言',
     'gen.langAuto': '跟隨系統',

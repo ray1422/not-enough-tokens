@@ -228,6 +228,37 @@ code { font: 12px var(--mono); background: var(--surface-2); padding: 1px 5px; b
    for the traffic lights. Anything clickable opts out of dragging. */
 .app-mac .topbar { padding-left: 88px; min-height: 52px; -webkit-app-region: drag; }
 .app-mac .topbar :is(a, button, label, input, .popover) { -webkit-app-region: no-drag; }
+/* Linux: Electron's window buttons sit in the overlay; titlebar-area-* is the part
+   left for us, on whichever side the desktop puts the buttons. */
+.app-linux .topbar {
+  min-height: 52px; -webkit-app-region: drag;
+  padding-left: calc(env(titlebar-area-x, 0px) + var(--gutter, 24px));
+  padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw) + var(--gutter, 24px));
+}
+.app-linux .topbar :is(a, button, label, input, .popover) { -webkit-app-region: no-drag; }
+
+/* Linux app page scrollbar (scrollbar.js), after macOS's overlay one: no layout
+   width, a thin thumb that widens over a translucent track on hover. */
+.own-scrollbar { scrollbar-width: none; }
+.own-scrollbar body * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--text) 35%, transparent) transparent; }
+.vscroll { position: fixed; right: 0; width: 15px; z-index: 5; opacity: 0; pointer-events: none; transition: opacity .3s; }
+.vscroll.on { opacity: 1; pointer-events: auto; transition-duration: .1s; }
+.vscroll::before {
+  content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity .15s;
+  background: color-mix(in srgb, var(--bg) 85%, transparent); border-left: 1px solid var(--border);
+}
+.vscroll:hover::before, .vscroll.drag::before { opacity: 1; }
+.vscroll .thumb {
+  position: absolute; top: 0; right: 4px; width: 6px;
+  background: color-mix(in srgb, var(--text) 45%, transparent);
+  border-radius: var(--r-pill); transition: width .15s, right .15s, background-color .15s;
+}
+.vscroll:hover .thumb, .vscroll.drag .thumb { right: 3px; width: 9px; background: color-mix(in srgb, var(--text) 60%, transparent); }
+/* Always shown: the track stays and the page leaves its width free. */
+.sb-always .vscroll::before { opacity: 1; }
+.set-section > .check + .formgrid { margin-top: 12px; }
+.sb-always :is(main, #settings-view) { padding-right: calc(var(--gutter, 24px) + 15px); }
+@media (prefers-reduced-motion: reduce) { .vscroll, .vscroll::before, .vscroll .thumb { transition: none; } }
 
 /* ---------- main ---------- */
 main { max-width: 1280px; margin: 0 auto; padding: 20px 24px; display: grid; gap: 16px; }
@@ -399,6 +430,7 @@ label.check { display: flex; gap: 8px; align-items: baseline; font-size: 13px; m
 }
 @media (max-width: 560px) {
   .topbar, main, #settings-view { padding-left: 16px; padding-right: 16px; }
+  :is(.topbar, main, #settings-view) { --gutter: 16px; }
   .wordmark { display: none; }
   .legend { margin-left: 0; }
   .formgrid { grid-template-columns: 1fr; }

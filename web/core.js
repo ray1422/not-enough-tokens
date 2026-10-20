@@ -205,4 +205,22 @@ export function applyTheme() {
   const th = store.get('theme', 'system');
   if (th === 'system') delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = th;
+  syncTitleBar();
 }
+
+// Linux app: the window buttons are drawn by Electron over the top bar, in colors
+// it can't read from the page, so send the tokens it sits on.
+const toHex = (c) => '#' + (c.match(/\d+/g) || []).slice(0, 3).map((n) => Number(n).toString(16).padStart(2, '0')).join('');
+function syncTitleBar() {
+  if (!window.netApp) return;
+  const probe = (v) => {
+    const el = document.createElement('i');
+    el.style.color = `var(${v})`;
+    document.body.append(el);
+    const c = getComputedStyle(el).color;
+    el.remove();
+    return toHex(c);
+  };
+  window.netApp.setTitleBarColors(probe('--bg'), probe('--text-2'));
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncTitleBar);

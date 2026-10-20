@@ -1,8 +1,9 @@
 // Settings page (#settings/<tab>): General, Machines and Prices, with tabs on the left.
 import { $, KINDS, S, api, esc, fmtAgo, fmtDay, fmtTok, kindLabel, machineSince, modal, setTz, store, applyTheme } from './core.js';
 import { LOCALES, setLocale, t } from './i18n.js';
+import { applyScrollbar, scrollbarPrefs } from './scrollbar.js';
 
-const TABS = ['general', 'machines', 'prices'];
+const tabs = () => ['general', 'machines', 'prices', 'ui'];
 const REPO = 'https://github.com/ray1422/not-enough-tokens';
 let ctx = null; // callbacks from app.js: { loadState, loadUsage, renderAll, startSync, log }
 let current = 'general';
@@ -14,6 +15,7 @@ export function initSettings(c) {
 export const settingsHash = (tab = 'general') => `#settings/${tab}`;
 
 export function showSettings(tab) {
+  const TABS = tabs();
   current = TABS.includes(tab) ? tab : 'general';
   const view = $('#settings-view');
   view.innerHTML = `<div class="set-wrap">
@@ -30,7 +32,7 @@ export function showSettings(tab) {
     </div>
   </div>`;
   $('#set-back').onclick = () => (location.hash = '');
-  ({ general: renderGeneral, machines: renderMachines, prices: renderPrices })[current]();
+  ({ general: renderGeneral, machines: renderMachines, prices: renderPrices, ui: renderUi })[current]();
 }
 
 function flashSaved() {
@@ -117,6 +119,31 @@ function renderGeneral() {
     } catch (err) {
       $('#g-err').textContent = err.message;
     }
+  });
+}
+
+// ---------- UI tuning ----------
+function renderUi() {
+  const p = scrollbarPrefs(store);
+  $('#set-pane').innerHTML = `
+    <section class="set-section">
+      <label class="check"><input type="checkbox" name="customScrollbar" ${p.custom ? 'checked' : ''}> ${esc(t('ui.customScrollbar'))}</label>
+      <div class="formgrid">
+        <label class="f wide">${esc(t('ui.scrollbar'))}<select name="scrollbar" ${p.custom ? '' : 'disabled'}>${[
+          ['auto', 'ui.sbAuto'],
+          ['always', 'ui.sbAlways'],
+        ].map(([v, k]) => `<option value="${v}" ${v === p.mode ? 'selected' : ''}>${esc(t(k))}</option>`).join('')}</select></label>
+      </div>
+    </section>`;
+  $('#set-pane').addEventListener('change', (e) => {
+    const { name } = e.target;
+    if (name === 'customScrollbar') {
+      store.set('customScrollbar', e.target.checked);
+      $('#set-pane select[name=scrollbar]').disabled = !e.target.checked;
+    } else if (name === 'scrollbar') store.set('scrollbar', e.target.value);
+    else return;
+    applyScrollbar(scrollbarPrefs(store));
+    flashSaved();
   });
 }
 

@@ -33,3 +33,19 @@ Don't use `window.confirm`/`alert`/`prompt`: embedded browsers suppress them. Us
 - A night-time arcade: the NOT ENOUGH TOKENS marquee, an INSERT TOKEN chase-light arrow from the app to Applications, spent tokens on the carpet, CREDITS 00.
 - Finder draws icon labels in black or white depending on its appearance, so they sit on mid-tone brass plates (both above 4:1). Icon positions in `package.json` (`dmg.contents`) must match `APP`/`APPS` in the script.
 - The window height includes the title bar, so the canvas runs past the visible bottom; keep content above y≈410.
+
+## Desktop window (Electron)
+
+- The top bar doubles as the title bar. macOS draws its traffic lights over it (`hiddenInset`). On Linux, Electron draws the window buttons as `titleBarOverlay`, in the order of the desktop's button layout; `.app-linux .topbar` leaves room via `env(titlebar-area-*)` and sends its colors through `preload.cjs` whenever the theme changes.
+- No menu bar off macOS (About is in Settings). macOS keeps the app, Edit and Window menus: ⌘C/⌘V/⌘W only work through visible menu items.
+
+## Custom page scrollbar
+
+The native page scrollbar always spans the full window height, so in the Linux app it would sit under the window buttons. `web/scrollbar.js` can hide it and draw one after macOS's overlay scrollbar; the page still scrolls natively. Settings → UI tuning turns it on or off (default on everywhere but macOS) and picks the mode below; both are stored per browser like the theme.
+
+- Overlay: no layout width. Runs from the top bar's bottom edge to the console's top edge; the thumb keeps 3px from both ends and is at least 32px long. Hidden when nothing scrolls.
+- Thumb 6px wide, `--text` at 45%; on hover or drag it widens to 9px at 60% over a translucent `--bg` track with a `--border` hairline on its left.
+- Shows on scroll only (hovering the edge doesn't reveal it, so it never covers content unasked); fades 1.2s after the last scroll, never while hovered or dragged. Reduced motion drops the fades, not the delay.
+- "Always show" keeps the track and thumb, and `main`/settings leave 15px free.
+- Drag the thumb; a click on the track pages toward it. Only the bar takes pointer events, and only while shown.
+- Inner scrollers (tables, the console) keep native thin scrollbars in the same color.

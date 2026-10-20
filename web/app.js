@@ -7,6 +7,7 @@ import {
 import { setLocale, t, translateDom } from './i18n.js';
 import { askHostKey, askMerge, initSettings, refreshSettings, showSettings } from './settings.js';
 import { initLogoFx } from './logo-fx.js';
+import { applyScrollbar, initScrollbar, scrollbarPrefs } from './scrollbar.js';
 
 function* rows() {
   if (!S.usage) return;
@@ -744,10 +745,16 @@ function wire() {
   });
 }
 
-// In the macOS app the window has no title bar: the top bar doubles as one.
-if (/Electron\//.test(navigator.userAgent) && /Mac/.test(navigator.platform)) document.documentElement.classList.add('app-mac');
+// In the desktop app the window has no title bar: the top bar doubles as one.
+// macOS draws its buttons over it; on Linux Electron's overlay takes the colors we send.
+if (/Electron\//.test(navigator.userAgent)) {
+  if (/Mac/.test(navigator.platform)) document.documentElement.classList.add('app-mac');
+  else if (window.netApp) document.documentElement.classList.add('app-linux');
+}
 applyTheme();
 initLogoFx($('.brand'));
+initScrollbar();
+applyScrollbar(scrollbarPrefs(store));
 initSettings({ loadState, loadUsage, renderAll, startSync, log });
 wire();
 await loadState();
