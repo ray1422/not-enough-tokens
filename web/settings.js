@@ -312,6 +312,20 @@ const testForm = (box, self = null) => {
 // Machines found over mDNS and Tailscale; source tags filter the list, and Add fills
 // the add form (LAN name as host, Tailscale name as a fallback host).
 const SOURCES = ['mdns', 'tailscale'];
+// Addresses to use for a found machine, from the sources being shown only: the LAN
+// IP (a .local name needs avahi + nss-mdns to resolve on Linux) and the Tailscale
+// name. For a known machine m, skips any it already lists, by name or by an IP
+// the source reported, so the same box isn't added twice under another spelling.
+function offer(d, shown, m) {
+  const have = new Set([m?.host, ...(m?.altHosts || []), m?.lastAddress].filter(Boolean).map((h) => String(h).toLowerCase()));
+  const out = [];
+  if (shown.has('mdns') && d.mdns) {
+    const ip = d.mdns.addrs.find((a) => /^\d+\.\d+\.\d+\.\d+$/.test(a)) || d.mdns.host;
+    if (![d.mdns.host, ...d.mdns.addrs].some((h) => have.has(h.toLowerCase()))) out.push(ip);
+  }
+  if (shown.has('tailscale') && d.tailscale && ![d.tailscale.host, ...d.tailscale.ips].some((h) => have.has(h.toLowerCase()))) out.push(d.tailscale.host);
+  return out;
+}
 function openDiscover(onAdd) {
   const shown = new Set(SOURCES);
   let data = null;
@@ -347,8 +361,9 @@ function openDiscover(onAdd) {
             : d.mdns ? [t('d.noSshShort'), t('d.noSsh')]
             : ['', ''];
           const known = d.known && S.machines.find((m) => m.id === d.known);
+          const alt = known ? offer(d, shown, known) : [];
           const acts = known
-            ? d.newHosts?.length ? `<button data-alt="${esc(d.key)}" title="${esc(d.newHosts.join(', '))}">${esc(t('d.addAlt'))}</button>` : ''
+            ? alt.length ? `<button data-alt="${esc(d.key)}" title="${esc(alt.join(', '))}">${esc(t('d.addAlt'))}</button>` : ''
             : `<button data-test="${esc(d.key)}">${esc(t('d.test'))}</button><button data-add="${esc(d.key)}">${esc(t('m.add'))}</button>`;
           const status = known ? t('d.known', { name: known.name }) : hint;
           return `<div class="disc-row" data-key="${esc(d.key)}">
@@ -391,17 +406,17 @@ function openDiscover(onAdd) {
     if (b.dataset.test) {
       const d = data.machines.find((x) => x.key === b.dataset.test);
       const row = b.closest('.disc-row');
-      const host = d.mdns?.host || d.tailscale?.host;
+      // Same address Add would use: the LAN IP, since .local may not resolve here.
+      const host = offer(d, new Set(SOURCES))[0] || d.mdns?.host || d.tailscale?.host;
       showTest(row, api('/api/test-connection', { method: 'POST', body: { host, port: d.mdns?.ssh || '' } }), {
         host,
         // Now we know which machine it is: offer the names it was found under as fallbacks.
         then: (r) => {
           const m = r.result === 'ok' && r.known && S.machines.find((x) => x.id === r.known);
           if (!m) return;
-          const have = new Set([m.host, ...(m.altHosts || [])].map((h) => String(h).toLowerCase()));
           d.known = m.id;
-          d.newHosts = [d.mdns?.host, d.tailscale?.host].filter((h) => h && !have.has(h.toLowerCase()));
-          $('.acts', row).innerHTML = d.newHosts.length ? `<button data-alt="${esc(d.key)}" title="${esc(d.newHosts.join(', '))}">${esc(t('d.addAlt'))}</button>` : '';
+          const alt = offer(d, shown, m);
+          $('.acts', row).innerHTML = alt.length ? `<button data-alt="${esc(d.key)}" title="${esc(alt.join(', '))}">${esc(t('d.addAlt'))}</button>` : '';
         },
       });
     }
@@ -409,10 +424,9 @@ function openDiscover(onAdd) {
       const d = data.machines.find((x) => x.key === b.dataset.alt);
       const m = S.machines.find((x) => x.id === d.known);
       b.disabled = true;
-      api('/api/machines/' + m.id, { method: 'PUT', body: { altHosts: [...(m.altHosts || []), ...d.newHosts] } })
+      api('/api/machines/' + m.id, { method: 'PUT', body: { altHosts: [...(m.altHosts || []), ...offer(d, shown, m)] } })
         .then(async () => {
           await ctx.loadState();
-          d.newHosts = [];
           const st = b.closest('.disc-row').querySelector('.status');
           if (st) (st.textContent = t('d.altAdded')), st.classList.add('ok');
           b.remove();
@@ -422,11 +436,11 @@ function openDiscover(onAdd) {
     const d = b.dataset.add && data.machines.find((x) => x.key === b.dataset.add);
     if (d) {
       close();
-      const lan = d.mdns?.host, ts = d.tailscale?.host;
+      const [host = '', ...alts] = offer(d, shown);
       onAdd({
         name: d.name,
-        host: lan || ts || '',
-        altHosts: lan && ts ? ts : '',
+        host,
+        altHosts: alts.join('\n'),
         port: d.mdns?.ssh && d.mdns.ssh !== 22 ? String(d.mdns.ssh) : '',
       });
     }

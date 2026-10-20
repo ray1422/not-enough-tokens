@@ -344,10 +344,6 @@ async function handle(req, res, ctx) {
     for (const d of r.machines) {
       const names = [d.mdns?.host, ...(d.mdns?.addrs || []), d.tailscale?.host, ...(d.tailscale?.ips || [])];
       d.known = names.map((h) => known.get(norm(h))).find(Boolean) || null;
-      // Names it was found under that the machine doesn't list yet: offered as fallbacks.
-      const m = machines.find((x) => x.id === d.known && x.type === 'ssh');
-      const have = new Set([m?.host, ...(m?.altHosts || [])].filter(Boolean).map(norm));
-      d.newHosts = m ? [d.mdns?.host, d.tailscale?.host].filter((h) => h && !have.has(norm(h))) : [];
     }
     return send(res, 200, r);
   }
