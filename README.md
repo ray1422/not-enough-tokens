@@ -6,17 +6,24 @@ Linux and macOS only.
 
 ## Install
 
-**macOS** (Apple silicon), one line in Terminal:
+One line in a terminal, on macOS (Apple silicon) or Linux:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ray1422/not-enough-tokens/main/packaging/mac/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/ray1422/not-enough-tokens/main/packaging/install.sh | sh
 ```
 
-It downloads the latest dmg from [Releases](https://github.com/ray1422/not-enough-tokens/releases) and copies the app into `/Applications`. [Read the script](packaging/mac/install.sh) first if you like; it is short.
+It picks the method for your system and downloads from [Releases](https://github.com/ray1422/not-enough-tokens/releases). [Read the script](packaging/install.sh) first if you like; it is short.
+
+| System | What it does |
+| --- | --- |
+| macOS | copies the app from the dmg into `/Applications` ([`packaging/mac/install.sh`](packaging/mac/install.sh)) |
+| Arch and derived | `pacman -U` on the release package, using the system `electron` (`NET_METHOD=appimage` for the AppImage instead) |
+| NixOS | prints `nix run github:ray1422/not-enough-tokens`, installs nothing |
+| other Linux | AppImage into `~/.local/bin` with a menu entry, no root; needs FUSE 2 |
 
 The app is ad-hoc signed, not notarized by Apple, so a dmg downloaded in a browser is blocked the first time you open the app ("Apple could not verify…"). Either use the line above (files fetched with `curl` are not quarantined), or open the dmg as usual and then allow the app once in System Settings → Privacy & Security → Open Anyway.
 
-**Linux:** the AppImage from Releases runs on most distributions (`chmod +x` it first). Arch users can use the AUR `PKGBUILD` attached to each release; Nix users `nix run github:ray1422/not-enough-tokens`. See [Packages](#packages) for building them yourself.
+On Linux you can also take the AppImage or the Arch `PKGBUILD` from Releases by hand, or run `nix run github:ray1422/not-enough-tokens`. See [Packages](#packages) for building them yourself.
 
 ## Run from source
 
