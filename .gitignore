@@ -10,3 +10,4 @@ packaging/*/pkg/
 packaging/*/*.pkg.tar.*
 packaging/*/*.tar.gz
 build/mac/
+*.swp

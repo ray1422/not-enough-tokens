@@ -67,7 +67,9 @@ pacman)
   echo "Downloading ${url##*/}"
   curl -fL --progress-bar -o "$tmp/${url##*/}" "$url"
   echo "Installing with pacman (electron comes from the Arch repositories)"
-  if [ "$(id -u)" = 0 ]; then pacman -U --noconfirm "$tmp/${url##*/}"; else sudo pacman -U "$tmp/${url##*/}"; fi
+  # Under `curl | sh` stdin is the script, so give pacman's [Y/n] prompt the terminal.
+  if [ -r /dev/tty ] && (: </dev/tty) 2>/dev/null; then in=/dev/tty; flag=; else in=/dev/null; flag=--noconfirm; fi
+  if [ "$(id -u)" = 0 ]; then pacman -U $flag "$tmp/${url##*/}" <"$in"; else sudo pacman -U $flag "$tmp/${url##*/}" <"$in"; fi
   echo "Done. Start it from your app menu or run: not-enough-tokens"
   ;;
 appimage)
