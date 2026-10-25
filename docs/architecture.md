@@ -11,6 +11,8 @@
 - `src/server.js`: HTTP API, SSE (sync log, askpass prompts) and the askpass endpoint. `src/cli.js`: `serve`, `sync`, `prices`.
 - `electron/main.js`: starts the same server in-process on a random port and opens a sandboxed, context-isolated window. Other origins open in the system browser; permission requests are denied.
 - `packaging/linux/`: launcher, `.desktop`, `install.sh` and PKGBUILD for the distro's electron.
+- `packaging/install.sh`: one-line installer that picks dmg, pacman package, AppImage or the nix hint by system; `packaging/mac/install.sh` is the macOS part.
+- `packaging/test/`: `test-install.sh` checks the installer's choice for an `os-release` sample of each branch (`NET_DRY_RUN=1`); CI `install-test` also runs it for real in an Ubuntu and an Arch container.
 - `web/`: no-build ES modules. `app.js` (main view), `settings.js`, `core.js` (state, API, formatting, period math), `i18n.js`, `logo-fx.js`, `style.css`.
 
 ## Data

@@ -1,0 +1,44 @@
+# Tests the one-line installer when it (or its tests) change:
+#   detect  -> which method each distro's os-release selects, no network
+#   install -> a real run in a container per distro, against the latest release
+name: install-test
+
+on:
+  pull_request:
+    paths:
+      - packaging/install.sh
+      - packaging/mac/install.sh
+      - packaging/test/**
+      - .github/workflows/install-test.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sh -n packaging/install.sh && sh -n packaging/mac/install.sh
+      - run: sh packaging/test/test-install.sh
+
+  install:
+    needs: detect
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: ubuntu:24.04
+            prep: apt-get update && apt-get install -y curl ca-certificates
+            check: test -x ~/.local/bin/not-enough-tokens.AppImage && test -f ~/.local/share/applications/not-enough-tokens.desktop
+          - image: archlinux:latest
+            prep: pacman -Syu --noconfirm curl
+            check: command -v not-enough-tokens && pacman -Q not-enough-tokens
+    container: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: ${{ matrix.prep }}
+      - run: sh packaging/install.sh
+      - run: ${{ matrix.check }}
